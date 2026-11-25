@@ -1,8 +1,6 @@
 package dev.localbench.batch
 
-import android.content.Intent
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,17 +87,8 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = {
-                    filtered.firstOrNull()?.let { s ->
-                        try {
-                            ctx.startActivity(
-                                Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(s.uri, "image/*")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                            )
-                        } catch (_: Throwable) {
-                            toast(ctx, "没有能打开这张图的应用")
-                        }
+                    if (!openGallery(ctx)) {
+                        toast(ctx, "这台机器没有能打开的系统相册，请到手机相册里找")
                     }
                 }) { Text("相册") }
                 OutlinedButton(onClick = { reload++ }) { Text("刷新") }
@@ -202,6 +191,8 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
         )
     }
 }
+
+
 
 
 

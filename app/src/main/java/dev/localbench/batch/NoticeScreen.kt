@@ -31,7 +31,7 @@ object NoticeStore {
     private const val KEY = "notice_seen"
 
     /** 公告编号：改大这个数，所有人都会重新看到右上角的小圆点 */
-    const val ID = 1
+    const val ID = 2
 
     fun seen(ctx: Context): Boolean =
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY, 0) >= ID
@@ -40,8 +40,14 @@ object NoticeStore {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putInt(KEY, ID).apply()
     }
 
+    /** 让公告里的版本号跟着安装包走，省得每次发版忘改。 */
+    private fun versionName(ctx: Context): String = runCatching {
+        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName.orEmpty()
+    }.getOrDefault("")
+
     fun read(ctx: Context): String = runCatching {
         ctx.assets.open("notice.md").bufferedReader().use { it.readText() }
+            .replace("{version}", versionName(ctx))
     }.getOrDefault("公告没打包进安装包。")
 }
 

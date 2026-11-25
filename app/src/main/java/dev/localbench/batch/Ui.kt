@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -91,6 +92,32 @@ fun ThumbBox(bmp: Bitmap?, label: String, side: Dp = 92.dp) {
             modifier = Modifier.align(Alignment.BottomStart).padding(3.dp)
         )
     }
+}
+
+/**
+ * 打开系统相册，而不是"拿一张图丢给某个看图应用"。
+ * 先按 CATEGORY_APP_GALLERY 唤起相册 App 主页；不行再用图片集合的目录 URI；都失败返回 false，
+ * 由调用方提示用户自己去系统相册里找。
+ */
+fun openGallery(ctx: Context): Boolean {
+    val tries = listOf(
+        Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_APP_GALLERY) },
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "vnd.android.cursor.dir/image")
+        },
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+        }
+    )
+    tries.forEach { i ->
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            ctx.startActivity(i)
+            return true
+        } catch (_: Throwable) {
+        }
+    }
+    return false
 }
 
 /** 把本机图片交给系统分享面板。文件不经过我们，由用户选择目标 App。 */

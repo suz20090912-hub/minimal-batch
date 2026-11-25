@@ -1,7 +1,7 @@
 {
-  "versionCode": 25,
-  "versionName": "1.5.0",
-  "notes": "自定义输出目录写完后，会主动通知系统相册刷新一次（仅内部存储卷有效）；成品页顶部新增「位置」切换，能翻回最近用过的输出目录（当前 + 最多 5 条历史）；交流群说明改为「不用只聊软件和图片，平常聊天也欢迎」。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.0/minimal-batch-v1.5.0-release.apk",
-  "size": 18562828
+  "versionCode": 26,
+  "versionName": "1.5.1",
+  "notes": "修「相册」按钮弹出白屏：原来是把单张图的 URI 丢给外部看图应用，自定义目录的图它读不到就显示一片白；现在改成真正唤起系统相册。公告里的版本号改为跟随安装包自动显示，不会再停在上一版。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.1/minimal-batch-v1.5.1-release.apk",
+  "size": 18563484
 }
