@@ -1,7 +1,7 @@
 {
-  "versionCode": 31,
-  "versionName": "1.6.1",
-  "notes": "转换完的结果卡能自己清了：点「清除记录」只清这条记录、回到选图状态，图片一张不删。更新日志字号加大、行距放宽，不再显示版本表格和分隔线，手机上不再挤成一团。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.6.1/minimal-batch-v1.6.1-release.apk",
-  "size": 18586808
+  "versionCode": 32,
+  "versionName": "1.6.2",
+  "notes": "选图网格里长按任意一张就进「移出」模式：再点几张加减勾选，点顶部「移出」只把这几张从这批里拿掉，原图不动也不删，剩下的张数和总体积立刻跟着变。不用为了去掉一张重新去相册翻一遍。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.6.2/minimal-batch-v1.6.2-release.apk",
+  "size": 18603352
 }
