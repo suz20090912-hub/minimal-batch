@@ -1,7 +1,7 @@
 {
-  "versionCode": 26,
-  "versionName": "1.5.1",
-  "notes": "修「相册」按钮弹出白屏：原来是把单张图的 URI 丢给外部看图应用，自定义目录的图它读不到就显示一片白；现在改成真正唤起系统相册。公告里的版本号改为跟随安装包自动显示，不会再停在上一版。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.1/minimal-batch-v1.5.1-release.apk",
-  "size": 18563484
+  "versionCode": 27,
+  "versionName": "1.5.2",
+  "notes": "转换完成后的结果收成一张卡，每张图的明细默认折叠、点一下才展开；「撤销这批」改名为「删除这批」并加确认框；删除时会把相册里的记录一起清掉，不再出现 App 里没了、相册里还在的矛盾。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.2/minimal-batch-v1.5.2-release.apk",
+  "size": 18580432
 }

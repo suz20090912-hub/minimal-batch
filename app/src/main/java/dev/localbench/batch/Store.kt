@@ -206,7 +206,20 @@ object Store {
     fun delete(ctx: Context, uri: Uri): Boolean {
         return try {
             if (DocumentsContract.isDocumentUri(ctx, uri)) {
-                DocumentsContract.deleteDocument(ctx.contentResolver, uri)
+                // 自定义目录的文件：文档删掉后，MediaStore 里的记录还在，相册就会继续显示一张已经不存在的图。
+                // 先算路径，删完再扫一次这个路径 —— 扫描器发现文件不在，会把那条记录一并清掉。
+                val path = runCatching {
+                    val id = DocumentsContract.getDocumentId(uri)
+                    if (id.startsWith("primary:")) {
+                        Environment.getExternalStorageDirectory().absolutePath +
+                            "/" + id.removePrefix("primary:")
+                    } else null
+                }.getOrNull()
+                val ok = DocumentsContract.deleteDocument(ctx.contentResolver, uri)
+                if (ok && path != null) {
+                    runCatching { MediaScannerConnection.scanFile(ctx, arrayOf(path), null, null) }
+                }
+                ok
             } else {
                 ctx.contentResolver.delete(uri, null, null) > 0
             }

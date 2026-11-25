@@ -35,6 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -469,11 +471,9 @@ fun ConvertScreen(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-        LazyColumn(Modifier.weight(1f)) {
-            if (batch != null) {
-                items(batch.items) { d -> DoneRow(d) }
-            } else {
+        if (batch == null) {
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(Modifier.weight(1f)) {
                 items(st.picked) { p -> PickedRow(p, st.preset) }
             }
         }
@@ -507,6 +507,8 @@ fun PreviewCard(p: BatchEngine.Preview) {
 
 @Composable
 fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () -> Unit) {
+    var expanded by remember(batch) { mutableStateOf(false) }
+    var askDelete by remember(batch) { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text("${batch.preset.label} · 完成", style = MaterialTheme.typography.titleMedium)
@@ -526,9 +528,43 @@ fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () ->
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onBrowse, modifier = Modifier.weight(1f)) { Text("看这批图") }
-                OutlinedButton(onClick = onUndo, modifier = Modifier.weight(1f)) { Text("撤销这批") }
+                OutlinedButton(onClick = { askDelete = true }, modifier = Modifier.weight(1f)) { Text("删除这批") }
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(tween(200)) + expandVertically(tween(260)),
+                exit = fadeOut(tween(140)) + shrinkVertically(tween(200))
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 210.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(top = 8.dp)
+                ) {
+                    batch.items.forEach { d -> DoneRow(d) }
+                }
+            }
+            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
             }
         }
+    }
+    if (askDelete) {
+        AlertDialog(
+            onDismissRequest = { askDelete = false },
+            title = { Text("删除这一批？") },
+            text = {
+                Text(
+                    "会删掉这次新生成的 ${batch.ok.size} 张图，原图不动。" +
+                        "删完系统相册里也会一起消失；以后想留就得重新处理一遍。"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { askDelete = false; onUndo() }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { askDelete = false }) { Text("取消") } }
+        )
     }
 }
 
@@ -567,6 +603,7 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
 
 
 

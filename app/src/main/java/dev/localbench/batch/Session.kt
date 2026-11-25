@@ -191,7 +191,7 @@ object Session {
         if (_state.value.batch === batch) {
             _state.value = _state.value.copy(batch = null)
         }
-        _state.value = _state.value.copy(notice = "已撤销，删除 $n 张新图；原图未动")
+        _state.value = _state.value.copy(notice = "已删除这一批新图 $n 张；原图未动，系统相册里也会消失")
         return n
     }
 
