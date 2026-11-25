@@ -38,16 +38,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -100,17 +104,25 @@ private val accent = Color(0xFFC7B3FF)
  * 编辑：取消 / 编辑 / 保存；左转 / 右转 / 镜像 / 裁剪 / 还原；保存另存新图。
  */
 @Composable
-fun ImageViewer(shots: List<Shot>, startIndex: Int, onSaved: () -> Unit, onDismiss: () -> Unit) {
+fun ImageViewer(
+    shots: List<Shot>,
+    startIndex: Int,
+    onSaved: () -> Unit,
+    onDeleted: () -> Unit,
+    onDismiss: () -> Unit
+) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val items = remember(shots) { mutableStateListOf<Shot>().apply { addAll(shots) } }
     val pager = rememberPagerState(
-        initialPage = startIndex.coerceIn(0, (shots.size - 1).coerceAtLeast(0))
-    ) { shots.size }
+        initialPage = startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+    ) { items.size }
 
     var chrome by remember { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf(false) }
+    var askDelete by remember { mutableStateOf(false) }
 
     var editShot by remember { mutableStateOf<Shot?>(null) }
     var src by remember { mutableStateOf<Bitmap?>(null) }
@@ -121,7 +133,7 @@ fun ImageViewer(shots: List<Shot>, startIndex: Int, onSaved: () -> Unit, onDismi
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var crop by remember { mutableStateOf(Rect(0.06f, 0.06f, 0.94f, 0.94f)) }
 
-    val current = shots.getOrNull(pager.currentPage) ?: shots.firstOrNull()
+    val current = items.getOrNull(pager.currentPage) ?: items.firstOrNull()
 
     LaunchedEffect(pager.currentPage) { zoomed = false }
 
@@ -213,7 +225,7 @@ fun ImageViewer(shots: List<Shot>, startIndex: Int, onSaved: () -> Unit, onDismi
                     userScrollEnabled = !zoomed && !info,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
-                    val s = shots.getOrNull(page)
+                    val s = items.getOrNull(page)
                     if (s != null) {
                         ViewerPage(
                             shot = s,
@@ -248,11 +260,12 @@ fun ImageViewer(shots: List<Shot>, startIndex: Int, onSaved: () -> Unit, onDismi
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            "${pager.currentPage + 1} / ${shots.size}",
+                            "${pager.currentPage + 1} / ${items.size}",
                             color = Color(0xFF98A1B0),
                             fontSize = 11.sp
                         )
                     }
+                    CircleIcon(Icons.Filled.Delete) { askDelete = true }
                     CircleIcon(Icons.Filled.Info) { info = true }
                 }
 
@@ -418,6 +431,38 @@ fun ImageViewer(shots: List<Shot>, startIndex: Int, onSaved: () -> Unit, onDismi
                 DetailRow("格式", fmtOf(current.name))
                 DetailRow("位置", positionOf(ctx, current))
             }
+        }
+
+        // ================= 删除确认 =================
+        if (askDelete && current != null) {
+            val s = current
+            AlertDialog(
+                onDismissRequest = { askDelete = false },
+                title = { Text("删除这张？") },
+                text = { Text("「${s.name}」会从手机里删掉，原图不动；删完系统相册里也会一起消失。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        askDelete = false
+                        scope.launch {
+                            val ok = withContext(Dispatchers.IO) { Store.delete(ctx, s.uri) }
+                            if (!ok) {
+                                toast(ctx, "删除失败，可能文件已经被移走了")
+                                return@launch
+                            }
+                            val idx = items.indexOfFirst { it.uri == s.uri }
+                            if (idx >= 0) items.removeAt(idx)
+                            onDeleted()
+                            if (items.isEmpty()) {
+                                onDismiss()
+                            } else {
+                                toast(ctx, "已删除 1 张")
+                                pager.scrollToPage(idx.coerceIn(0, items.size - 1))
+                            }
+                        }
+                    }) { Text("删除") }
+                },
+                dismissButton = { TextButton(onClick = { askDelete = false }) { Text("取消") } }
+            )
         }
     }
 }
@@ -758,4 +803,8 @@ private fun clampOffset(o: Offset, s: Float, viewSize: IntSize): Offset {
     val maxY = (viewSize.height * (s - 1f)) / 2f
     return Offset(o.x.coerceIn(-maxX, maxX), o.y.coerceIn(-maxY, maxY))
 }
+
+
+
+
 

@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -40,7 +42,15 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -49,12 +59,17 @@ import kotlinx.coroutines.withContext
 @Composable
 fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> Unit) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var shots by remember { mutableStateOf(emptyList<Shot>()) }
     var loading by remember { mutableStateOf(true) }
     var dir by remember { mutableStateOf(focus ?: "全部") }
     var reload by remember { mutableStateOf(0) }
     var loc by remember { mutableStateOf(Store.currentLocation(ctx)) }
     val locs = remember(refreshKey, reload) { Store.locations(ctx) }
+    // 选择模式：长按一张进来，点图片加减，顶部出现删除
+    var selecting by remember { mutableStateOf(false) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var askDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(focus) { if (focus != null) dir = focus }
     LaunchedEffect(refreshKey, reload, loc) {
@@ -78,20 +93,34 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("成品 · ${filtered.size} 张", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${loc.label} · 共 ${mb(totalKb)}",
+                    if (selecting) "已选 ${selected.size} 张" else "成品 · ${filtered.size} 张",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    if (selecting) "再点图片可以加减选择" else "${loc.label} · 共 ${mb(totalKb)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = {
-                    if (!openGallery(ctx)) {
-                        toast(ctx, "这台机器没有能打开的系统相册，请到手机相册里找")
+            if (selecting) {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    TextButton(onClick = { askDelete = true }, enabled = selected.isNotEmpty()) {
+                        Text("删除")
                     }
-                }) { Text("相册") }
-                OutlinedButton(onClick = { reload++ }) { Text("刷新") }
+                    TextButton(onClick = { selecting = false; selected = emptySet() }) {
+                        Text("取消")
+                    }
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        if (!openGallery(ctx)) {
+                            toast(ctx, "这台机器没有能打开的系统相册，请到手机相册里找")
+                        }
+                    }) { Text("相册") }
+                    OutlinedButton(onClick = { reload++ }) { Text("刷新") }
+                }
             }
         }
 
@@ -154,15 +183,63 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 itemsIndexed(filtered, key = { _, s -> s.uri.toString() }) { i, s ->
-                    ShotTile(s) { onOpen(filtered, i) }
+                    val key = s.uri.toString()
+                    ShotTile(
+                        shot = s,
+                        selecting = selecting,
+                        selected = key in selected,
+                        onClick = {
+                            if (selecting) {
+                                selected = if (key in selected) selected - key else selected + key
+                            } else {
+                                onOpen(filtered, i)
+                            }
+                        },
+                        onLongPress = {
+                            if (!selecting) {
+                                selecting = true
+                                selected = setOf(key)
+                            }
+                        }
+                    )
                 }
             }
+        }
+
+        if (askDelete) {
+            AlertDialog(
+                onDismissRequest = { askDelete = false },
+                title = { Text("删除选中的 ${selected.size} 张？") },
+                text = { Text("只会删这些新生成的图，原图不动；删完系统相册里也会一起消失。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        askDelete = false
+                        val victims = filtered.filter { it.uri.toString() in selected }
+                        selecting = false
+                        selected = emptySet()
+                        scope.launch {
+                            val n = withContext(Dispatchers.IO) {
+                                victims.count { Store.delete(ctx, it.uri) }
+                            }
+                            toast(ctx, "已删除 $n 张")
+                            reload++
+                        }
+                    }) { Text("删除") }
+                },
+                dismissButton = { TextButton(onClick = { askDelete = false }) { Text("取消") } }
+            )
         }
     }
 }
 
 @Composable
-fun ShotTile(shot: Shot, onClick: () -> Unit) {
+fun ShotTile(
+    shot: Shot,
+    selecting: Boolean = false,
+    selected: Boolean = false,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit = {}
+) {
     val ctx = LocalContext.current
     var bmp by remember(shot.uri) { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(shot.uri) { bmp = BatchEngine.loadThumb(ctx, shot.uri, 360) }
@@ -170,9 +247,15 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .alpha(if (selecting && !selected) 0.72f else 1f)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() }
+            .pointerInput(shot.uri, selecting) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongPress() }
+                )
+            }
     ) {
         val b = bmp
         if (b != null) {
@@ -183,14 +266,43 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop
             )
         }
-        Text(
-            mb(shot.sizeKb),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
-        )
+        if (selected) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
+            )
+        }
+        if (selecting) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else Color.Black.copy(alpha = 0.28f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selected) Text("✓", color = Color.White, fontSize = 11.sp)
+            }
+        } else {
+            Text(
+                mb(shot.sizeKb),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
+            )
+        }
     }
 }
+
+
+
+
+
 
 
 

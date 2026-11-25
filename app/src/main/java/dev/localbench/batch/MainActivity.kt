@@ -236,7 +236,8 @@ fun BatchApp() {
         ImageViewer(
             if (zoomList.isNotEmpty()) zoomList else lastZoom,
             zoomIndex,
-            onSaved = { galleryKey++ }
+            onSaved = { galleryKey++ },
+            onDeleted = { galleryKey++ }
         ) { zoomList = emptyList() }
     }
 
@@ -508,7 +509,6 @@ fun PreviewCard(p: BatchEngine.Preview) {
 @Composable
 fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () -> Unit) {
     var expanded by remember(batch) { mutableStateOf(false) }
-    var askDelete by remember(batch) { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text("${batch.preset.label} · 完成", style = MaterialTheme.typography.titleMedium)
@@ -526,10 +526,7 @@ fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () ->
                 Text(notice, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onBrowse, modifier = Modifier.weight(1f)) { Text("看这批图") }
-                OutlinedButton(onClick = { askDelete = true }, modifier = Modifier.weight(1f)) { Text("删除这批") }
-            }
+            Button(onClick = onBrowse, modifier = Modifier.fillMaxWidth()) { Text("看这批图") }
             AnimatedVisibility(
                 visible = expanded,
                 enter = fadeIn(tween(200)) + expandVertically(tween(260)),
@@ -549,22 +546,6 @@ fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () ->
                 Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
             }
         }
-    }
-    if (askDelete) {
-        AlertDialog(
-            onDismissRequest = { askDelete = false },
-            title = { Text("删除这一批？") },
-            text = {
-                Text(
-                    "会删掉这次新生成的 ${batch.ok.size} 张图，原图不动。" +
-                        "删完系统相册里也会一起消失；以后想留就得重新处理一遍。"
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { askDelete = false; onUndo() }) { Text("删除") }
-            },
-            dismissButton = { TextButton(onClick = { askDelete = false }) { Text("取消") } }
-        )
     }
 }
 

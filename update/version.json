@@ -1,7 +1,7 @@
 {
-  "versionCode": 27,
-  "versionName": "1.5.2",
-  "notes": "转换完成后的结果收成一张卡，每张图的明细默认折叠、点一下才展开；「撤销这批」改名为「删除这批」并加确认框；删除时会把相册里的记录一起清掉，不再出现 App 里没了、相册里还在的矛盾。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.2/minimal-batch-v1.5.2-release.apk",
-  "size": 18580432
+  "versionCode": 28,
+  "versionName": "1.5.3",
+  "notes": "删除只留一处：结果卡里不再有「删除这批」；成品页长按任意一张进入选择模式，点图加减、顶部出现删除；全屏看图页右上加了删除键，删当前这一张。删除会连系统相册里的记录一起清掉。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.3/minimal-batch-v1.5.3-release.apk",
+  "size": 18597188
 }
