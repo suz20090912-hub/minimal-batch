@@ -217,6 +217,10 @@ fun BatchApp() {
                         onPrefix = { Session.setPrefix(it) },
                         onStart = { Session.start(ctx) },
                         onClear = { Session.clearPicked(ctx) },
+                        onRemovePicked = { uris ->
+                            Session.removePicked(ctx, uris)
+                            toast(ctx, "已移出 ${uris.size} 张，不参与这批")
+                        },
                         onDismissRecord = { Session.dismissBatch() },
                         onOpenPicked = { list, idx ->
                             zoomReadOnly = true
@@ -321,11 +325,26 @@ fun ConvertScreen(
     onPrefix: (String) -> Unit,
     onStart: () -> Unit,
     onClear: () -> Unit,
+    onRemovePicked: (Set<Uri>) -> Unit,
     onDismissRecord: () -> Unit,
     onOpenPicked: (List<Shot>, Int) -> Unit
 ) {
     val ctx = LocalContext.current
     val shots = remember(st.picked) { st.picked.map { Shot(it.uri, it.name, it.sizeKb, "") } }
+    // 长按一张进入"移出"模式：勾几张，点「移出」就只把这几张从这批里拿掉，原图不动
+    var trimming by remember { mutableStateOf(false) }
+    var trimSet by remember { mutableStateOf(emptySet<Uri>()) }
+
+    BackHandler(enabled = trimming) {
+        trimming = false
+        trimSet = emptySet()
+    }
+
+    LaunchedEffect(st.picked) {
+        val alive = st.picked.map { it.uri }.toSet()
+        if (trimSet.any { it !in alive }) trimSet = trimSet.filter { it in alive }.toSet()
+    }
+
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) onPicked(uris) }
@@ -463,20 +482,63 @@ fun ConvertScreen(
 
         if (batch == null) {
             Spacer(Modifier.height(8.dp))
-            Text(
-                "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下能放大看",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (trimming) "已勾 ${trimSet.size} 张，点「移出」就不参与这批"
+                    else "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下放大，长按移出",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                if (trimming) {
+                    TextButton(
+                        onClick = {
+                            if (trimSet.isNotEmpty()) onRemovePicked(trimSet)
+                            trimSet = emptySet()
+                            trimming = false
+                        },
+                        enabled = trimSet.isNotEmpty()
+                    ) { Text("移出") }
+                    TextButton(onClick = {
+                        trimSet = emptySet()
+                        trimming = false
+                    }) { Text("取消") }
+                }
+            }
             Spacer(Modifier.height(6.dp))
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                itemsIndexed(shots, key = { _, s -> s.uri.toString() }) { i, s ->
-                    ShotTile(shot = s, onClick = { onOpenPicked(shots, i) })
+            if (st.picked.isEmpty()) {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        "这批已经空了。点上面的「选择图片」重新挑。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    itemsIndexed(shots, key = { _, s -> s.uri.toString() }) { i, s ->
+                        ShotTile(
+                            shot = s,
+                            selecting = trimming,
+                            selected = s.uri in trimSet,
+                            onClick = {
+                                if (trimming) {
+                                    trimSet = if (s.uri in trimSet) trimSet - s.uri else trimSet + s.uri
+                                } else {
+                                    onOpenPicked(shots, i)
+                                }
+                            },
+                            onLongPress = {
+                                trimming = true
+                                trimSet = trimSet + s.uri
+                            }
+                        )
+                    }
                 }
             }
         }

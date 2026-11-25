@@ -31,7 +31,7 @@ object NoticeStore {
     private const val KEY = "notice_seen"
 
     /** 公告编号：改大这个数，所有人都会重新看到右上角的小圆点 */
-    const val ID = 7
+    const val ID = 8
 
     fun seen(ctx: Context): Boolean =
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY, 0) >= ID
@@ -121,6 +121,7 @@ fun MarkdownLite(text: String, modifier: Modifier = Modifier) {
         }
     }
 }
+
 
 
 

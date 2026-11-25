@@ -18,8 +18,8 @@ android {
         applicationId = "dev.localbench.batch"
         minSdk = 29
         targetSdk = 35
-        versionCode = 31
-        versionName = "1.6.1"
+        versionCode = 32
+        versionName = "1.6.2"
     }
 
     signingConfigs {
@@ -67,6 +67,7 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
 
 
 

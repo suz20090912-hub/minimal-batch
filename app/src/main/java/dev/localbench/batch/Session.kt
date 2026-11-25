@@ -131,6 +131,21 @@ object Session {
     }
 
     /**
+     * 从这批里拿掉几张，但不动文件、也不动授权。
+     * 用在"选了三张只想转两张"的场合，省得重新去相册翻一遍。
+     */
+    fun removePicked(context: Context, uris: Set<Uri>) {
+        if (uris.isEmpty()) return
+        bind(context)
+        val left = _state.value.picked.filterNot { it.uri in uris }
+        if (left.size == _state.value.picked.size) return
+        prefs(context).edit()
+            .putStringSet(K_SEL, left.map { it.uri.toString() }.toSet())
+            .apply()
+        _state.value = _state.value.copy(picked = left, batch = null, notice = "")
+    }
+
+    /**
      * 只清掉转换页那张结果记录，让页面回到选图状态。
      * 不碰任何文件：成品还在相册和成品页里，要删图得去成品页选。
      */
