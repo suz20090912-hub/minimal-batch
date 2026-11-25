@@ -1,7 +1,7 @@
 {
-  "versionCode": 29,
-  "versionName": "1.5.4",
-  "notes": "成品页选择模式加了「全选 / 清空」，当前这批一下就能全选上；转换完成后不再摆「看这批图」按钮，改成弹一句「转换完成，请到成品页查看」，只弹一次。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.4/minimal-batch-v1.5.4-release.apk",
-  "size": 18597556
+  "versionCode": 30,
+  "versionName": "1.6.0",
+  "notes": "选图后不再预跑「处理后的样子」，直接列出你选中的原图：点一下能放大看、能翻页缩放、能看文件详情，但只读，不出现分享/编辑/删除。成品页在选择模式里按返回，先退出选择，不再一下跳回转换页。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.6.0/minimal-batch-v1.6.0-release.apk",
+  "size": 18598100
 }
