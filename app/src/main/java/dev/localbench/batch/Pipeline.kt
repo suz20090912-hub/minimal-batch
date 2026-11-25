@@ -1,13 +1,13 @@
 package dev.localbench.batch
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.SystemClock
-import android.provider.MediaStore
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -72,8 +72,6 @@ data class Batch(
 }
 
 object BatchEngine {
-
-    const val OUT_FOLDER = "Pictures/极简批处理"
 
     /** 预览产物：原图缩略图 + 处理后缩略图 + 预计体积。 */
     data class Preview(
@@ -197,16 +195,13 @@ object BatchEngine {
             }
 
             val out = buildOutput(decoded, preset)
-
-            val bos = ByteArrayOutputStream()
-            out.compress(Bitmap.CompressFormat.JPEG, preset.quality, bos)
-            val data = bos.toByteArray()
+            val data = encodeJpeg(out, preset.quality)
             val outW = out.width
             val outH = out.height
             if (out !== decoded) out.recycle()
 
             val outName = buildName(name, preset, prefix, seq)
-            val saved = saveToGallery(ctx, outName, data)
+            val saved = Store.save(ctx, preset, outName, data)
             val ms = (System.nanoTime() - tStart) / 1_000_000L
 
             return if (saved.first != null) {
@@ -252,6 +247,26 @@ object BatchEngine {
         }
     }
 
+    /**
+     * PNG / WebP 带透明通道时先合到白底再编码。
+     * 否则 JPEG 不支持 alpha，透明区域会变成黑块。
+     */
+    private fun encodeJpeg(src: Bitmap, quality: Int): ByteArray {
+        val flat = if (src.hasAlpha()) flattenOnWhite(src) else src
+        val bos = ByteArrayOutputStream()
+        flat.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+        if (flat !== src) flat.recycle()
+        return bos.toByteArray()
+    }
+
+    private fun flattenOnWhite(src: Bitmap): Bitmap {
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        canvas.drawColor(Color.WHITE)
+        canvas.drawBitmap(src, 0f, 0f, null)
+        return out
+    }
+
     // ---------------- 预览 ----------------
 
     /**
@@ -285,28 +300,23 @@ object BatchEngine {
         val bytes = readAll(ctx, uri)
         if (bytes.isEmpty()) return Preview(p, null, null, 0, 0, 0, "读取失败")
 
-        var before: Bitmap? = null
         var beforeThumb: Bitmap? = null
         var decoded: Bitmap? = null
         var out: Bitmap? = null
-        var afterThumb: Bitmap? = null
         try {
-            before = decodeSampled(bytes, 360)
-            beforeThumb = before
+            beforeThumb = decodeSampled(bytes, 360)
 
             decoded = decodeForPreset(bytes, preset)
             out = buildOutput(decoded, preset)
-            val bos = ByteArrayOutputStream()
-            out.compress(Bitmap.CompressFormat.JPEG, preset.quality, bos)
-            val kb = bos.size() / 1024
-            afterThumb = scaleToMax(out, 360)
+            val data = encodeJpeg(out, preset.quality)
+            val after = decodeSampled(data, 360)
 
-            return Preview(p, beforeThumb, afterThumb, out.width, out.height, kb)
+            return Preview(p, beforeThumb, after, out.width, out.height, data.size / 1024)
         } catch (t: Throwable) {
             return Preview(p, beforeThumb, null, 0, 0, 0, t.message ?: t.javaClass.simpleName)
         } finally {
-            if (afterThumb == null || afterThumb !== out) out?.recycle()
-            if (out == null || out !== decoded) decoded?.recycle()
+            if (out != null && out !== decoded) out.recycle()
+            decoded?.recycle()
         }
     }
 
@@ -329,18 +339,6 @@ object BatchEngine {
                 decoder.setTargetSize(max(1, (w * f).roundToInt()), max(1, (h * f).roundToInt()))
             }
         }
-
-    private fun scaleToMax(src: Bitmap, maxSide: Int): Bitmap {
-        val long = max(src.width, src.height)
-        if (long <= maxSide) return src
-        val f = maxSide.toFloat() / long.toFloat()
-        return Bitmap.createScaledBitmap(
-            src,
-            max(1, (src.width * f).roundToInt()),
-            max(1, (src.height * f).roundToInt()),
-            true
-        )
-    }
 
     private fun applyTargetSize(decoder: ImageDecoder, w: Int, h: Int, preset: Preset) {
         if (preset.square) {
@@ -373,10 +371,7 @@ object BatchEngine {
         var n = 0
         batch.items.forEach { item ->
             val u = item.outUri ?: return@forEach
-            try {
-                if (ctx.contentResolver.delete(u, null, null) > 0) n++
-            } catch (_: Exception) {
-            }
+            if (Store.delete(ctx, u)) n++
         }
         return n
     }
@@ -405,25 +400,9 @@ object BatchEngine {
         }
         return uri.lastPathSegment ?: "unknown"
     }
-
-    private fun saveToGallery(ctx: Context, outName: String, data: ByteArray): Pair<Uri?, String?> {
-        return try {
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, outName)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.RELATIVE_PATH, OUT_FOLDER)
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-            val uri = ctx.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                ?: return null to "图库写入被拒"
-            ctx.contentResolver.openOutputStream(uri)?.use { it.write(data) }
-            values.clear()
-            values.put(MediaStore.Images.Media.IS_PENDING, 0)
-            ctx.contentResolver.update(uri, values, null, null)
-            uri to null
-        } catch (t: Throwable) {
-            null to (t.message ?: t.javaClass.simpleName)
-        }
-    }
 }
+
+
+
+
 
