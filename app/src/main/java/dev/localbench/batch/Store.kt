@@ -254,7 +254,7 @@ object Store {
                 list += Node(
                     id, name,
                     mime == DocumentsContract.Document.MIME_TYPE_DIR,
-                    c.getLong(3) / 1024L
+                    (c.getLong(3) / 1024L).toInt()
                 )
             }
         }
