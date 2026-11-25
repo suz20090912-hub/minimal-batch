@@ -1,7 +1,7 @@
 {
-  "versionCode": 30,
-  "versionName": "1.6.0",
-  "notes": "选图后不再预跑「处理后的样子」，直接列出你选中的原图：点一下能放大看、能翻页缩放、能看文件详情，但只读，不出现分享/编辑/删除。成品页在选择模式里按返回，先退出选择，不再一下跳回转换页。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.6.0/minimal-batch-v1.6.0-release.apk",
-  "size": 18598100
+  "versionCode": 31,
+  "versionName": "1.6.1",
+  "notes": "转换完的结果卡能自己清了：点「清除记录」只清这条记录、回到选图状态，图片一张不删。更新日志字号加大、行距放宽，不再显示版本表格和分隔线，手机上不再挤成一团。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.6.1/minimal-batch-v1.6.1-release.apk",
+  "size": 18586808
 }
