@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +52,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -125,18 +129,28 @@ fun UpdateScreen(onClose: () -> Unit) {
                 var bestMs = Long.MAX_VALUE
                 var last: Throwable? = null
                 var map = pingMs
-                candidates.forEach { m ->
-                    if (m.url.isBlank()) return@forEach
-                    try {
-                        val ms = Update.ping(m.url, px)
+                // 并发测速：一条挂了不拖住别的，镜像多也不会等很久
+                val results = coroutineScope {
+                    candidates.filter { it.url.isNotBlank() }.map { m ->
+                        async {
+                            try {
+                                Triple(m, Update.ping(m.url, px), null)
+                            } catch (t: Throwable) {
+                                Triple(m, -1L, t)
+                            }
+                        }
+                    }.awaitAll()
+                }
+                results.forEach { (m, ms, t) ->
+                    if (ms >= 0) {
                         map = map + (m.id to ms)
                         if (ms < bestMs) {
                             bestMs = ms
                             best = m
                         }
-                    } catch (t: Throwable) {
+                    } else {
                         map = map + (m.id to -1L)
-                        last = t
+                        if (t != null) last = t
                     }
                 }
                 pingMs = map
@@ -195,6 +209,7 @@ fun UpdateScreen(onClose: () -> Unit) {
         Column(
             Modifier
                 .fillMaxSize()
+                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
@@ -535,4 +550,6 @@ private fun fmtSize(bytes: Long): String = when {
     bytes >= 1024 -> String.format(Locale.US, "%.0f KB", bytes / 1024f)
     else -> "$bytes B"
 }
+
+
 

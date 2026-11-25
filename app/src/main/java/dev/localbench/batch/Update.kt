@@ -40,7 +40,7 @@ object Update {
     private const val K_PROXY_HOST = "proxy_host"
     private const val K_PROXY_PORT = "proxy_port"
 
-    /** 内置镜像站，都是同一份 update/version.json 的不同线路 */
+    /** 内置镜像站，都是同一份 update/version.json 的不同线路；不保证长期可用，所以每条都能单独测速 */
     val BUILTIN = listOf(
         Mirror(
             "jsdelivr",
@@ -51,6 +51,21 @@ object Update {
             "ghproxy",
             "ghproxy 加速",
             "https://ghproxy.net/https://raw.githubusercontent.com/suz20090912-hub/minimal-batch/main/update/version.json"
+        ),
+        Mirror(
+            "ghproxy_com",
+            "gh-proxy.com",
+            "https://gh-proxy.com/https://raw.githubusercontent.com/suz20090912-hub/minimal-batch/main/update/version.json"
+        ),
+        Mirror(
+            "ghfast",
+            "ghfast.top",
+            "https://ghfast.top/https://raw.githubusercontent.com/suz20090912-hub/minimal-batch/main/update/version.json"
+        ),
+        Mirror(
+            "ghweb",
+            "GitHub 网页 raw",
+            "https://github.com/suz20090912-hub/minimal-batch/raw/main/update/version.json"
         ),
         Mirror(
             "raw",
