@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -99,9 +100,12 @@ fun BatchApp() {
 
     BackHandler {
         when {
-            st.running -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
-            st.picked.isNotEmpty() || st.batch != null -> exitAsk = true
-            else -> (ctx as? Activity)?.finish()
+            // 一层一层退：全屏图 → 更新日志 → 处理中挡住 → 非转换页回转换页 → 根页才问退不退出
+            zoom != null -> zoom = null
+            logOpen -> logOpen = false
+            st.running && tab == 0 -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
+            tab != 0 -> tab = 0
+            else -> exitAsk = true
         }
     }
 
@@ -170,8 +174,11 @@ fun ExitDialog(st: Session.State, onCancel: () -> Unit) {
         title = { Text("确定退出？") },
         text = {
             Text(
-                if (st.running) "正在处理 ${st.doneCount}/${st.totalCount} 张，退出会中断这一批。"
-                else "已选 ${st.picked.size} 张图。退出后下次打开会自动恢复这些选择，但当前这轮的进度会丢。"
+                when {
+                    st.running -> "正在处理 ${st.doneCount}/${st.totalCount} 张，退出会中断这一批。"
+                    st.picked.isNotEmpty() -> "已选 ${st.picked.size} 张图。退出后下次打开会自动恢复这些选择，但当前这轮的进度会丢。"
+                    else -> "退出后下次打开还是回到这里，输出位置和设置都会保留。"
+                }
             )
         },
         confirmButton = {
@@ -425,9 +432,20 @@ fun FullScreenImage(uri: Uri, onDismiss: () -> Unit) {
             Image(
                 bitmap = b.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                // 黑底铺满整屏没问题，但图片本身要落在安全区里，否则顶部会被状态栏挡住一截
+                modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(6.dp),
                 contentScale = ContentScale.Fit
             )
         }
+        Text(
+            "点任意处关闭",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF8A94A6),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .safeDrawingPadding()
+                .padding(bottom = 14.dp)
+        )
     }
 }
+
