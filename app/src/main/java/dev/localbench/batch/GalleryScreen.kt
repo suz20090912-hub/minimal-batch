@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,7 +49,7 @@ import kotlinx.coroutines.withContext
  * 成品页。按场景子文件夹分类，全部从磁盘现场扫，不依赖数据库。
  */
 @Composable
-fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (Shot) -> Unit) {
+fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> Unit) {
     val ctx = LocalContext.current
     var shots by remember { mutableStateOf(emptyList<Shot>()) }
     var loading by remember { mutableStateOf(true) }
@@ -146,8 +147,8 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (Shot) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(filtered, key = { it.uri.toString() }) { s ->
-                    ShotTile(s) { onOpen(s) }
+                itemsIndexed(filtered, key = { _, s -> s.uri.toString() }) { i, s ->
+                    ShotTile(s) { onOpen(filtered, i) }
                 }
             }
         }
@@ -184,4 +185,6 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
         )
     }
 }
+
+
 

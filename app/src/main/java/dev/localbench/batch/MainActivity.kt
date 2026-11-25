@@ -98,7 +98,8 @@ fun BatchApp() {
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var exitAsk by remember { mutableStateOf(false) }
-    var zoomShot by remember { mutableStateOf<Shot?>(null) }
+    var zoomList by remember { mutableStateOf<List<Shot>>(emptyList()) }
+    var zoomIndex by remember { mutableIntStateOf(0) }
     var focusDir by remember { mutableStateOf<String?>(null) }
     var galleryKey by remember { mutableIntStateOf(0) }
     var logOpen by remember { mutableStateOf(false) }
@@ -109,7 +110,7 @@ fun BatchApp() {
     BackHandler {
         when {
             // 一层一层退：全屏图 → 更新日志 → 处理中挡住 → 非转换页回转换页 → 根页才问退不退出
-            zoomShot != null -> zoomShot = null
+            zoomList.isNotEmpty() -> zoomList = emptyList()
             logOpen -> logOpen = false
             st.running && tab == 0 -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
             tab != 0 -> tab = 0
@@ -157,7 +158,7 @@ fun BatchApp() {
                 1 -> GalleryScreen(
                     focus = focusDir,
                     refreshKey = galleryKey,
-                    onOpen = { s -> zoomShot = s }
+                    onOpen = { list, idx -> zoomList = list; zoomIndex = idx }
                 )
 
                 else -> SettingsScreen(
@@ -168,8 +169,9 @@ fun BatchApp() {
         }
     }
 
-    val zs = zoomShot
-    if (zs != null) ImageViewer(zs, onSaved = { galleryKey++ }) { zoomShot = null }
+    if (zoomList.isNotEmpty()) {
+        ImageViewer(zoomList, zoomIndex, onSaved = { galleryKey++ }) { zoomList = emptyList() }
+    }
     if (exitAsk) ExitDialog(st) { exitAsk = false }
     if (logOpen) ChangelogScreen { logOpen = false }
 }
@@ -425,5 +427,6 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
 
 
