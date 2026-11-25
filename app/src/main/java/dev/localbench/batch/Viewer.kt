@@ -2,12 +2,14 @@ package dev.localbench.batch
 
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -30,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -100,6 +103,7 @@ fun ImageViewer(shot: Shot, onSaved: () -> Unit, onDismiss: () -> Unit) {
     var cropping by remember(shot.uri) { mutableStateOf(false) }
     var chrome by remember(shot.uri) { mutableStateOf(true) }
     var saving by remember(shot.uri) { mutableStateOf(false) }
+    var info by remember(shot.uri) { mutableStateOf(false) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var crop by remember(shot.uri) { mutableStateOf(Rect(0.06f, 0.06f, 0.94f, 0.94f)) }
 
@@ -209,8 +213,7 @@ fun ImageViewer(shot: Shot, onSaved: () -> Unit, onDismiss: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                // 占位，保证文件名相对整条屏幕居中
-                Spacer(Modifier.size(40.dp))
+                CircleIcon(Icons.Filled.Info) { info = true }
             }
 
             Row(
@@ -306,8 +309,81 @@ fun ImageViewer(shot: Shot, onSaved: () -> Unit, onDismiss: () -> Unit) {
                 }
             }
         }
+
+        // ================= 文件详情面板 =================
+        if (info && !editing) {
+            val b = work
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0x99000000))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { info = false }
+            )
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                    .background(Color(0xFF17191F))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { }
+                    .safeDrawingPadding()
+                    .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "文件详情",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextAction("关闭") { info = false }
+                }
+                Spacer(Modifier.height(6.dp))
+                DetailRow("文件名", shot.name)
+                DetailRow("尺寸", if (b != null) "${b.width} × ${b.height} 像素" else "—")
+                DetailRow("大小", sizeText(shot.sizeKb))
+                DetailRow("格式", fmtOf(shot.name))
+                DetailRow("位置", positionOf(ctx, shot))
+            }
+        }
     }
 }
+
+/** 详情面板的一行 */
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+        Text(label, color = Color(0xFF98A1B0), fontSize = 13.sp, modifier = Modifier.width(60.dp))
+        Text(value, color = Color(0xFFE8EBF2), fontSize = 13.sp, modifier = Modifier.weight(1f))
+    }
+}
+
+private fun sizeText(kb: Int): String {
+    if (kb <= 0) return "—"
+    return if (kb >= 1024) String.format(Locale.US, "%.1f MB", kb / 1024f) else "$kb KB"
+}
+
+private fun fmtOf(name: String): String {
+    val ext = name.substringAfterLast('.', "").uppercase(Locale.US)
+    return when (ext) {
+        "JPG", "JPEG" -> "JPEG"
+        "PNG" -> "PNG"
+        "WEBP" -> "WebP"
+        "HEIC", "HEIF" -> "HEIC"
+        "" -> "未知"
+        else -> ext
+    }
+}
+
+private fun positionOf(ctx: Context, shot: Shot): String =
+    if (Store.isCustom(ctx)) Store.where(ctx)
+    else "Pictures/${Store.root(ctx)}/${shot.dir}"
 
 /** 圆形图标按钮：实心底 + 白描边，压在任何图上都能看见 */
 @Composable
@@ -575,3 +651,4 @@ fun ZoomableImage(bmp: Bitmap, label: String, onTap: () -> Unit) {
             }
     )
 }
+
