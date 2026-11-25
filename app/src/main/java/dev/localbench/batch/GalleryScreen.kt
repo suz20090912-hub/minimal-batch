@@ -104,7 +104,11 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
                 )
             }
             if (selecting) {
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                val allOn = filtered.isNotEmpty() && filtered.all { it.uri.toString() in selected }
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    TextButton(onClick = {
+                        selected = if (allOn) emptySet() else filtered.map { it.uri.toString() }.toSet()
+                    }) { Text(if (allOn) "清空" else "全选") }
                     TextButton(onClick = { askDelete = true }, enabled = selected.isNotEmpty()) {
                         Text("删除")
                     }

@@ -1,7 +1,7 @@
 {
-  "versionCode": 28,
-  "versionName": "1.5.3",
-  "notes": "删除只留一处：结果卡里不再有「删除这批」；成品页长按任意一张进入选择模式，点图加减、顶部出现删除；全屏看图页右上加了删除键，删当前这一张。删除会连系统相册里的记录一起清掉。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.3/minimal-batch-v1.5.3-release.apk",
-  "size": 18597188
+  "versionCode": 29,
+  "versionName": "1.5.4",
+  "notes": "成品页选择模式加了「全选 / 清空」，当前这批一下就能全选上；转换完成后不再摆「看这批图」按钮，改成弹一句「转换完成，请到成品页查看」，只弹一次。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.4/minimal-batch-v1.5.4-release.apk",
+  "size": 18597556
 }

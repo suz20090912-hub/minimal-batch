@@ -144,7 +144,12 @@ fun BatchApp() {
         noticeUnread = !NoticeStore.seen(ctx)
     }
     LaunchedEffect(zoomList) { if (zoomList.isNotEmpty()) lastZoom = zoomList }
-    LaunchedEffect(st.batch) { if (st.batch != null) galleryKey++ }
+    LaunchedEffect(st.batch) {
+        if (st.batch != null) {
+            galleryKey++
+            toast(ctx, "转换完成，请到成品页查看")
+        }
+    }
 
     BackHandler {
         when {
@@ -207,9 +212,7 @@ fun BatchApp() {
                         onPreset = { p -> Session.setPreset(ctx, p) },
                         onPrefix = { Session.setPrefix(it) },
                         onStart = { Session.start(ctx) },
-                        onClear = { Session.clearPicked(ctx) },
-                        onUndo = { b -> Session.undo(ctx, b); galleryKey++ },
-                        onBrowse = { dir -> focusDir = dir; tab = 1; galleryKey++ }
+                        onClear = { Session.clearPicked(ctx) }
                     )
 
                     1 -> GalleryScreen(
@@ -302,9 +305,7 @@ fun ConvertScreen(
     onPreset: (Preset) -> Unit,
     onPrefix: (String) -> Unit,
     onStart: () -> Unit,
-    onClear: () -> Unit,
-    onUndo: (Batch) -> Unit,
-    onBrowse: (String) -> Unit
+    onClear: () -> Unit
 ) {
     val ctx = LocalContext.current
     val picker = rememberLauncherForActivityResult(
@@ -464,9 +465,7 @@ fun ConvertScreen(
                 if (batch != null) {
                     ResultCard(
                         batch = batch,
-                        notice = st.notice,
-                        onBrowse = { onBrowse(batch.preset.label) },
-                        onUndo = { onUndo(batch) }
+                        notice = st.notice
                     )
                 }
             }
@@ -507,7 +506,7 @@ fun PreviewCard(p: BatchEngine.Preview) {
 }
 
 @Composable
-fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () -> Unit) {
+fun ResultCard(batch: Batch, notice: String) {
     var expanded by remember(batch) { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
@@ -526,7 +525,6 @@ fun ResultCard(batch: Batch, notice: String, onBrowse: () -> Unit, onUndo: () ->
                 Text(notice, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onBrowse, modifier = Modifier.fillMaxWidth()) { Text("看这批图") }
             AnimatedVisibility(
                 visible = expanded,
                 enter = fadeIn(tween(200)) + expandVertically(tween(260)),
@@ -584,6 +582,7 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
 
 
 
