@@ -3,6 +3,8 @@ package dev.localbench.batch
 import android.content.Context
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -239,6 +241,12 @@ fun UpdateScreen(onClose: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
 
+        val dlRatio by animateFloatAsState(
+            targetValue = progress / 100f,
+            animationSpec = tween(240),
+            label = "dlProgress"
+        )
+
         // ---------- 当前版本 + 获取更新 ----------
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp)) {
@@ -250,10 +258,12 @@ fun UpdateScreen(onClose: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(10.dp))
+                val getSrc = remember { MutableInteractionSource() }
                 Button(
                     onClick = { confirm = true },
                     enabled = !busy && !downloading,
-                    modifier = Modifier.fillMaxWidth()
+                    interactionSource = getSrc,
+                    modifier = Modifier.fillMaxWidth().pressScale(getSrc)
                 ) { Text(if (busy) "检查中…" else "获取更新") }
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -340,7 +350,7 @@ fun UpdateScreen(onClose: () -> Unit) {
 
                                     downloading -> {
                                         LinearProgressIndicator(
-                                            progress = { progress / 100f },
+                                            progress = { dlRatio },
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                         Spacer(Modifier.height(6.dp))
@@ -560,6 +570,7 @@ private fun fmtSize(bytes: Long): String = when {
     bytes >= 1024 -> String.format(Locale.US, "%.0f KB", bytes / 1024f)
     else -> "$bytes B"
 }
+
 
 
 

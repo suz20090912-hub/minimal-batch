@@ -11,4 +11,8 @@
 *.apk
 *.aab
 *.keystore
+*.jks
 !debug.keystore
+keystore.properties
+release-key/
+

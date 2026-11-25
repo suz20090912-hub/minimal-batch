@@ -77,6 +77,31 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
         Text("设置", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(10.dp))
 
+        // ---------- 外观 ----------
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp)) {
+                Text("外观", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "白色 / 黑色 / 跟着系统变。改完立刻生效，不用重启。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThemeMode.entries.forEach { m ->
+                        FilterChip(
+                            selected = ThemeStore.mode == m,
+                            onClick = { ThemeStore.set(ctx, m) },
+                            label = { Text(m.label) }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
         // ---------- 输出位置 ----------
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp)) {
@@ -192,6 +217,28 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
 
         Spacer(Modifier.height(10.dp))
 
+        // ---------- 交流群 ----------
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp)) {
+                Text("交流群", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(4.dp))
+                Text("QQ 群：1135338332", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "想交流、聊天，或者遇到 bug、有功能建议，都可以加这个群直接说。" +
+                        "群里不卖课、不推广，只聊这个工具和批量处理图片的事。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { copyText(ctx, "1135338332", "群号已复制，去 QQ 搜索加入") }
+                ) { Text("复制群号") }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
         // ---------- 更新日志 / 关于 ----------
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp)) {
@@ -215,10 +262,15 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 InfoRow("版本", "v$version")
                 InfoRow("协议", "MIT")
                 InfoRow("权限", "联网仅用于手动检查更新")
+                InfoRow("费用", "完全免费 · 不设赞助")
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "全部处理在本机完成，图片不上传。检查更新放在「设置 → 检查更新」里，" +
-                        "只有你手动点的时候才联网。",
+                    "本项目完全开源免费，不设置任何赞助渠道，也没有付费版。能帮到你就好。",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "全部处理在本机完成，图片不上传。检查更新只有你手动点的时候才联网。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

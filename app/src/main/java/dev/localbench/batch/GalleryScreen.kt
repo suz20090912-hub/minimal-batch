@@ -165,7 +165,7 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF1A1F26))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { onClick() }
     ) {
         val b = bmp
@@ -180,11 +180,12 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
         Text(
             mb(shot.sizeKb),
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFD0D6E0),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
         )
     }
 }
+
 
 
 

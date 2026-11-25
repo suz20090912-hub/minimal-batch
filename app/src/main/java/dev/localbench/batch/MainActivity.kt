@@ -2,6 +2,7 @@ package dev.localbench.batch
 
 import android.app.Activity
 import android.graphics.Bitmap
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,11 +10,24 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -31,6 +45,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -38,6 +53,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -56,7 +72,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -76,13 +91,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Session.bind(applicationContext)
+        ThemeStore.init(applicationContext)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            val mode = ThemeStore.mode
+            val systemDark = isSystemInDarkTheme()
+            val dark = mode.resolveDark(systemDark)
+            val view = androidx.compose.ui.platform.LocalView.current
+            LaunchedEffect(dark) {
+                window.setBackgroundDrawable(
+                    ColorDrawable(if (dark) WINDOW_DARK else WINDOW_LIGHT)
+                )
+                val c = WindowCompat.getInsetsController(window, view)
+                c.isAppearanceLightStatusBars = !dark
+                c.isAppearanceLightNavigationBars = !dark
+            }
+            AppTheme(mode) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     BatchApp()
                 }
@@ -104,15 +133,23 @@ fun BatchApp() {
     var galleryKey by remember { mutableIntStateOf(0) }
     var logOpen by remember { mutableStateOf(false) }
     var updateOpen by remember { mutableStateOf(false) }
+    var noticeOpen by remember { mutableStateOf(false) }
+    var noticeUnread by remember { mutableStateOf(false) }
+    var lastZoom by remember { mutableStateOf<List<Shot>>(emptyList()) }
 
-    LaunchedEffect(Unit) { Session.init(ctx) }
+    LaunchedEffect(Unit) {
+        Session.init(ctx)
+        noticeUnread = !NoticeStore.seen(ctx)
+    }
+    LaunchedEffect(zoomList) { if (zoomList.isNotEmpty()) lastZoom = zoomList }
     LaunchedEffect(st.batch) { if (st.batch != null) galleryKey++ }
 
     BackHandler {
         when {
-            // 一层一层退：全屏图 → 更新日志 → 处理中挡住 → 非转换页回转换页 → 根页才问退不退出
+            // 一层一层退：全屏图 → 更新中心/公告/更新日志 → 非转换页回转换页 → 根页才问退不退出
             zoomList.isNotEmpty() -> zoomList = emptyList()
             updateOpen -> updateOpen = false
+            noticeOpen -> noticeOpen = false
             logOpen -> logOpen = false
             st.running && tab == 0 -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
             tab != 0 -> tab = 0
@@ -145,39 +182,87 @@ fun BatchApp() {
         }
     ) { pad ->
         Box(Modifier.fillMaxSize().padding(pad)) {
-            when (tab) {
-                0 -> ConvertScreen(
-                    st = st,
-                    onPicked = { uris -> Session.setPicked(ctx, uris) },
-                    onPreset = { p -> Session.setPreset(ctx, p) },
-                    onPrefix = { Session.setPrefix(it) },
-                    onStart = { Session.start(ctx) },
-                    onClear = { Session.clearPicked(ctx) },
-                    onUndo = { b -> Session.undo(ctx, b); galleryKey++ },
-                    onBrowse = { dir -> focusDir = dir; tab = 1; galleryKey++ }
-                )
+            // 三个页签之间淡入 + 轻微上浮，不再硬切
+            AnimatedContent(
+                targetState = tab,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    (fadeIn(tween(220)) + slideInVertically(tween(280)) { it / 28 }) togetherWith
+                        fadeOut(tween(150))
+                },
+                label = "tab"
+            ) { t ->
+                when (t) {
+                    0 -> ConvertScreen(
+                        st = st,
+                        showNoticeDot = noticeUnread,
+                        onNotice = {
+                            noticeOpen = true
+                            NoticeStore.markSeen(ctx)
+                            noticeUnread = false
+                        },
+                        onPicked = { uris -> Session.setPicked(ctx, uris) },
+                        onPreset = { p -> Session.setPreset(ctx, p) },
+                        onPrefix = { Session.setPrefix(it) },
+                        onStart = { Session.start(ctx) },
+                        onClear = { Session.clearPicked(ctx) },
+                        onUndo = { b -> Session.undo(ctx, b); galleryKey++ },
+                        onBrowse = { dir -> focusDir = dir; tab = 1; galleryKey++ }
+                    )
 
-                1 -> GalleryScreen(
-                    focus = focusDir,
-                    refreshKey = galleryKey,
-                    onOpen = { list, idx -> zoomList = list; zoomIndex = idx }
-                )
+                    1 -> GalleryScreen(
+                        focus = focusDir,
+                        refreshKey = galleryKey,
+                        onOpen = { list, idx -> zoomList = list; zoomIndex = idx }
+                    )
 
-                else -> SettingsScreen(
-                    onOpenLog = { logOpen = true },
-                    onChanged = { galleryKey++ },
-                    onOpenUpdate = { updateOpen = true }
-                )
+                    else -> SettingsScreen(
+                        onOpenLog = { logOpen = true },
+                        onChanged = { galleryKey++ },
+                        onOpenUpdate = { updateOpen = true }
+                    )
+                }
             }
         }
     }
 
-    if (zoomList.isNotEmpty()) {
-        ImageViewer(zoomList, zoomIndex, onSaved = { galleryKey++ }) { zoomList = emptyList() }
+    AnimatedVisibility(
+        visible = zoomList.isNotEmpty(),
+        enter = fadeIn(tween(180)),
+        exit = fadeOut(tween(150))
+    ) {
+        ImageViewer(
+            if (zoomList.isNotEmpty()) zoomList else lastZoom,
+            zoomIndex,
+            onSaved = { galleryKey++ }
+        ) { zoomList = emptyList() }
     }
-    if (updateOpen) UpdateScreen { updateOpen = false }
+
+    AnimatedVisibility(
+        visible = updateOpen,
+        enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 14 },
+        exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 20 }
+    ) {
+        UpdateScreen { updateOpen = false }
+    }
+
+    AnimatedVisibility(
+        visible = noticeOpen,
+        enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 14 },
+        exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 20 }
+    ) {
+        NoticeScreen { noticeOpen = false }
+    }
+
+    AnimatedVisibility(
+        visible = logOpen,
+        enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 14 },
+        exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 20 }
+    ) {
+        ChangelogScreen { logOpen = false }
+    }
+
     if (exitAsk) ExitDialog(st) { exitAsk = false }
-    if (logOpen) ChangelogScreen { logOpen = false }
 }
 
 @Composable
@@ -208,6 +293,8 @@ fun ExitDialog(st: Session.State, onCancel: () -> Unit) {
 @Composable
 fun ConvertScreen(
     st: Session.State,
+    showNoticeDot: Boolean,
+    onNotice: () -> Unit,
     onPicked: (List<Uri>) -> Unit,
     onPreset: (Preset) -> Unit,
     onPrefix: (String) -> Unit,
@@ -222,12 +309,41 @@ fun ConvertScreen(
     ) { uris -> if (uris.isNotEmpty()) onPicked(uris) }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        Text("极简批处理", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "原图只读，新图写进 ${Store.where(ctx)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("极简批处理", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "原图只读，新图写进 ${Store.where(ctx)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Box {
+                TextButton(onClick = onNotice) {
+                    Icon(
+                        Icons.Filled.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("公告")
+                }
+                if (showNoticeDot) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 8.dp, end = 8.dp)
+                            .size(7.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
+        }
 
         Spacer(Modifier.height(10.dp))
         Row(
@@ -255,18 +371,34 @@ fun ConvertScreen(
         )
 
         Spacer(Modifier.height(10.dp))
+        val pickSrc = remember { MutableInteractionSource() }
+        val startSrc = remember { MutableInteractionSource() }
+        val previewRatio by animateFloatAsState(
+            targetValue = if (st.previewTotal == 0) 0f
+            else st.previewDone.toFloat() / st.previewTotal.toFloat(),
+            animationSpec = tween(320),
+            label = "previewProgress"
+        )
+        val batchRatio by animateFloatAsState(
+            targetValue = if (st.totalCount == 0) 0f
+            else st.doneCount.toFloat() / st.totalCount.toFloat(),
+            animationSpec = tween(320),
+            label = "batchProgress"
+        )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { picker.launch(arrayOf("image/*")) },
                 enabled = !st.running,
-                modifier = Modifier.weight(1f)
+                interactionSource = pickSrc,
+                modifier = Modifier.weight(1f).pressScale(pickSrc)
             ) {
                 Text(if (st.picked.isEmpty()) "选择图片" else "重选（${st.picked.size} 张）")
             }
             Button(
                 onClick = onStart,
                 enabled = st.picked.isNotEmpty() && !st.running,
-                modifier = Modifier.weight(1f)
+                interactionSource = startSrc,
+                modifier = Modifier.weight(1f).pressScale(startSrc)
             ) { Text("开始处理") }
         }
 
@@ -285,9 +417,7 @@ fun ConvertScreen(
         if (st.previewBusy) {
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = {
-                    if (st.previewTotal == 0) 0f else st.previewDone.toFloat() / st.previewTotal.toFloat()
-                },
+                progress = { previewRatio },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(2.dp))
@@ -310,9 +440,7 @@ fun ConvertScreen(
         if (st.running) {
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = {
-                    if (st.totalCount == 0) 0f else st.doneCount.toFloat() / st.totalCount.toFloat()
-                },
+                progress = { batchRatio },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(2.dp))
@@ -323,14 +451,22 @@ fun ConvertScreen(
         }
 
         val batch = st.batch
-        if (batch != null) {
-            Spacer(Modifier.height(10.dp))
-            ResultCard(
-                batch = batch,
-                notice = st.notice,
-                onBrowse = { onBrowse(batch.preset.label) },
-                onUndo = { onUndo(batch) }
-            )
+        AnimatedVisibility(
+            visible = batch != null,
+            enter = fadeIn(tween(220)) + expandVertically(tween(300)),
+            exit = fadeOut(tween(150)) + shrinkVertically(tween(220))
+        ) {
+            Column {
+                Spacer(Modifier.height(10.dp))
+                if (batch != null) {
+                    ResultCard(
+                        batch = batch,
+                        notice = st.notice,
+                        onBrowse = { onBrowse(batch.preset.label) },
+                        onUndo = { onUndo(batch) }
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -431,6 +567,9 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
+
+
 
 
 

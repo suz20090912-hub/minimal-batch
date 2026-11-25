@@ -1,7 +1,7 @@
 {
-  "versionCode": 23,
-  "versionName": "1.3.2",
-  "notes": "更新中心：整页让开状态栏，标题与返回箭头不再压时间和电量；镜像站 3 条 → 6 条（jsDelivr / ghproxy 加速 / gh-proxy.com / ghfast.top / GitHub 网页 raw / GitHub Raw），自动测速改成六条并发，一条挂了不拖住其他；自动模式再读次快那条做交叉核对，CDN 缓存停在旧版本时不会误报「已是最新」。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.3.2/minimal-batch-v1.3.2-debug.apk",
-  "size": 24725702
+  "versionCode": 24,
+  "versionName": "1.4.0",
+  "notes": "首页右上角公告、设置里的交流群（QQ 1135338332）、外观三档（跟随系统/白/黑）、全局过渡动画（页签淡入、页面滑进滑出、进度条平滑、按钮回弹）；「关于」写明完全开源免费、不设赞助渠道。这一版起改用正式签名：从 1.3.x 升级要先卸载一次，之后可覆盖安装。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.4.0/minimal-batch-v1.4.0-release.apk",
+  "size": 18545128
 }
