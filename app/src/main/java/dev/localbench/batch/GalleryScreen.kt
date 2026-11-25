@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
  * 成品页。按场景子文件夹分类，全部从磁盘现场扫，不依赖数据库。
  */
 @Composable
-fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (Uri) -> Unit) {
+fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (Shot) -> Unit) {
     val ctx = LocalContext.current
     var shots by remember { mutableStateOf(emptyList<Shot>()) }
     var loading by remember { mutableStateOf(true) }
@@ -147,7 +147,7 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (Uri) -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(filtered, key = { it.uri.toString() }) { s ->
-                    ShotTile(s) { onOpen(s.uri) }
+                    ShotTile(s) { onOpen(s) }
                 }
             }
         }
@@ -184,3 +184,4 @@ fun ShotTile(shot: Shot, onClick: () -> Unit) {
         )
     }
 }
+

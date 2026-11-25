@@ -12,6 +12,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,7 +98,7 @@ fun BatchApp() {
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var exitAsk by remember { mutableStateOf(false) }
-    var zoom by remember { mutableStateOf<Uri?>(null) }
+    var zoomShot by remember { mutableStateOf<Shot?>(null) }
     var focusDir by remember { mutableStateOf<String?>(null) }
     var galleryKey by remember { mutableIntStateOf(0) }
     var logOpen by remember { mutableStateOf(false) }
@@ -101,7 +109,7 @@ fun BatchApp() {
     BackHandler {
         when {
             // 一层一层退：全屏图 → 更新日志 → 处理中挡住 → 非转换页回转换页 → 根页才问退不退出
-            zoom != null -> zoom = null
+            zoomShot != null -> zoomShot = null
             logOpen -> logOpen = false
             st.running && tab == 0 -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
             tab != 0 -> tab = 0
@@ -149,7 +157,7 @@ fun BatchApp() {
                 1 -> GalleryScreen(
                     focus = focusDir,
                     refreshKey = galleryKey,
-                    onOpen = { zoom = it }
+                    onOpen = { s -> zoomShot = s }
                 )
 
                 else -> SettingsScreen(
@@ -160,8 +168,8 @@ fun BatchApp() {
         }
     }
 
-    val z = zoom
-    if (z != null) FullScreenImage(z) { zoom = null }
+    val zs = zoomShot
+    if (zs != null) ImageViewer(zs.uri, zs.name) { zoomShot = null }
     if (exitAsk) ExitDialog(st) { exitAsk = false }
     if (logOpen) ChangelogScreen { logOpen = false }
 }
@@ -418,34 +426,116 @@ fun DoneRow(d: Done) {
     }
 }
 
+/**
+ * 全屏看图：双指缩放、双击放大/还原、放大后拖动，点一下收起/显示顶部按钮。
+ * 黑底仍然铺满整屏，图片本身落在安全区内，不会被状态栏压住。
+ */
 @Composable
-fun FullScreenImage(uri: Uri, onDismiss: () -> Unit) {
+fun ImageViewer(uri: Uri, name: String, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     var bmp by remember(uri) { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(uri) { bmp = BatchEngine.loadThumb(ctx, uri, 1600) }
-    Box(
-        Modifier.fillMaxSize().background(Color.Black).clickable { onDismiss() },
-        contentAlignment = Alignment.Center
-    ) {
+    var chrome by remember(uri) { mutableStateOf(true) }
+    LaunchedEffect(uri) { bmp = BatchEngine.loadThumb(ctx, uri, 2000) }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
         val b = bmp
         if (b != null) {
-            Image(
-                bitmap = b.asImageBitmap(),
-                contentDescription = null,
-                // 黑底铺满整屏没问题，但图片本身要落在安全区里，否则顶部会被状态栏挡住一截
-                modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(6.dp),
-                contentScale = ContentScale.Fit
+            Box(Modifier.fillMaxSize().safeDrawingPadding().padding(4.dp)) {
+                ZoomableImage(b, name) { chrome = !chrome }
+            }
+        } else {
+            Text(
+                "载入中…",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF8A94A6),
+                modifier = Modifier.align(Alignment.Center)
             )
         }
-        Text(
-            "点任意处关闭",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF8A94A6),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .safeDrawingPadding()
-                .padding(bottom = 14.dp)
-        )
+
+        if (chrome) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .safeDrawingPadding()
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) { Text("返回") }
+                Text(
+                    name,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFD0D6E0),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                TextButton(onClick = { shareImage(ctx, uri, name) }) { Text("分享") }
+            }
+            Text(
+                "双指缩放 · 双击放大/还原 · 点一下收起按钮",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF8A94A6),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .safeDrawingPadding()
+                    .padding(bottom = 14.dp)
+            )
+        }
     }
 }
+
+@Composable
+fun ZoomableImage(bmp: Bitmap, label: String, onTap: () -> Unit) {
+    var scale by remember(bmp) { mutableFloatStateOf(1f) }
+    var offset by remember(bmp) { mutableStateOf(Offset.Zero) }
+    var viewSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Image(
+        bitmap = bmp.asImageBitmap(),
+        contentDescription = label,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { viewSize = it }
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offset.x,
+                translationY = offset.y
+            )
+            .pointerInput(bmp) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val next = (scale * zoom).coerceIn(1f, 5f)
+                    scale = next
+                    offset = if (next <= 1.02f) {
+                        Offset.Zero
+                    } else {
+                        val maxX = (viewSize.width * (next - 1f)) / 2f
+                        val maxY = (viewSize.height * (next - 1f)) / 2f
+                        Offset(
+                            (offset.x + pan.x).coerceIn(-maxX, maxX),
+                            (offset.y + pan.y).coerceIn(-maxY, maxY)
+                        )
+                    }
+                }
+            }
+            .pointerInput(bmp) {
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onDoubleTap = {
+                        if (scale > 1.05f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                        } else {
+                            scale = 2.5f
+                        }
+                    }
+                )
+            }
+    )
+}
+
+
+
 

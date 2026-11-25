@@ -1,7 +1,10 @@
 package dev.localbench.batch
 
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -53,5 +56,20 @@ fun ThumbBox(bmp: Bitmap?, label: String, side: Dp = 92.dp) {
             color = Color(0xFF8A94A6),
             modifier = Modifier.align(Alignment.BottomStart).padding(3.dp)
         )
+    }
+}
+
+/** 把本机图片交给系统分享面板。文件不经过我们，由用户选择目标 App。 */
+fun shareImage(ctx: Context, uri: Uri, name: String) {
+    try {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "image/jpeg"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newRawUri(name, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        ctx.startActivity(Intent.createChooser(send, "分享这张图"))
+    } catch (_: Throwable) {
+        toast(ctx, "没有可用的分享应用")
     }
 }
