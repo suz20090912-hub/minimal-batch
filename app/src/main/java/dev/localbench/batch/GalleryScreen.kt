@@ -1,6 +1,7 @@
 package dev.localbench.batch
 
 import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -70,6 +71,12 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var askDelete by remember { mutableStateOf(false) }
+
+    // 选择模式下按返回，先退出选择，不要直接跳回转换页
+    BackHandler(enabled = selecting) {
+        selecting = false
+        selected = emptySet()
+    }
 
     LaunchedEffect(focus) { if (focus != null) dir = focus }
     LaunchedEffect(refreshKey, reload, loc) {
@@ -302,6 +309,7 @@ fun ShotTile(
         }
     }
 }
+
 
 
 

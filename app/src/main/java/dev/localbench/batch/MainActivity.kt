@@ -51,6 +51,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -138,6 +141,7 @@ fun BatchApp() {
     var noticeOpen by remember { mutableStateOf(false) }
     var noticeUnread by remember { mutableStateOf(false) }
     var lastZoom by remember { mutableStateOf<List<Shot>>(emptyList()) }
+    var zoomReadOnly by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         Session.init(ctx)
@@ -212,13 +216,22 @@ fun BatchApp() {
                         onPreset = { p -> Session.setPreset(ctx, p) },
                         onPrefix = { Session.setPrefix(it) },
                         onStart = { Session.start(ctx) },
-                        onClear = { Session.clearPicked(ctx) }
+                        onClear = { Session.clearPicked(ctx) },
+                        onOpenPicked = { list, idx ->
+                            zoomReadOnly = true
+                            zoomList = list
+                            zoomIndex = idx
+                        }
                     )
 
                     1 -> GalleryScreen(
                         focus = focusDir,
                         refreshKey = galleryKey,
-                        onOpen = { list, idx -> zoomList = list; zoomIndex = idx }
+                        onOpen = { list, idx ->
+                            zoomReadOnly = false
+                            zoomList = list
+                            zoomIndex = idx
+                        }
                     )
 
                     else -> SettingsScreen(
@@ -239,6 +252,7 @@ fun BatchApp() {
         ImageViewer(
             if (zoomList.isNotEmpty()) zoomList else lastZoom,
             zoomIndex,
+            viewOnly = zoomReadOnly,
             onSaved = { galleryKey++ },
             onDeleted = { galleryKey++ }
         ) { zoomList = emptyList() }
@@ -305,9 +319,11 @@ fun ConvertScreen(
     onPreset: (Preset) -> Unit,
     onPrefix: (String) -> Unit,
     onStart: () -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    onOpenPicked: (List<Shot>, Int) -> Unit
 ) {
     val ctx = LocalContext.current
+    val shots = remember(st.picked) { st.picked.map { Shot(it.uri, it.name, it.sizeKb, "") } }
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) onPicked(uris) }
@@ -377,12 +393,6 @@ fun ConvertScreen(
         Spacer(Modifier.height(10.dp))
         val pickSrc = remember { MutableInteractionSource() }
         val startSrc = remember { MutableInteractionSource() }
-        val previewRatio by animateFloatAsState(
-            targetValue = if (st.previewTotal == 0) 0f
-            else st.previewDone.toFloat() / st.previewTotal.toFloat(),
-            animationSpec = tween(320),
-            label = "previewProgress"
-        )
         val batchRatio by animateFloatAsState(
             targetValue = if (st.totalCount == 0) 0f
             else st.doneCount.toFloat() / st.totalCount.toFloat(),
@@ -418,29 +428,6 @@ fun ConvertScreen(
             TextButton(onClick = onClear) { Text("清空已选") }
         }
 
-        if (st.previewBusy) {
-            Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { previewRatio },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(2.dp))
-            Text("生成预览 ${st.previewDone} / ${st.previewTotal}", style = MaterialTheme.typography.bodySmall)
-        }
-
-        if (st.batch == null && st.previews.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(st.previews) { p -> PreviewCard(p) }
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "左：原图　右：处理后的样子（按当前场景真跑一遍，未写盘）",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
         if (st.running) {
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
@@ -473,8 +460,21 @@ fun ConvertScreen(
 
         if (batch == null) {
             Spacer(Modifier.height(8.dp))
-            LazyColumn(Modifier.weight(1f)) {
-                items(st.picked) { p -> PickedRow(p, st.preset) }
+            Text(
+                "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下能放大看",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(6.dp))
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                itemsIndexed(shots, key = { _, s -> s.uri.toString() }) { i, s ->
+                    ShotTile(shot = s, onClick = { onOpenPicked(shots, i) })
+                }
             }
         }
     }
@@ -582,6 +582,9 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
+
+
 
 
 

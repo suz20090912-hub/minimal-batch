@@ -144,24 +144,22 @@ object Session {
         _state.value = _state.value.copy(notice = text)
     }
 
-    /** 预览：同一时刻只跑一份，换场景/重选图会取消上一轮。 */
+    /**
+     * 以前这里会为每张图真跑一遍生成"处理后样子"的预览卡，费时又占内存。
+     * 现在选完图直接列出原图本身，点开能放大看、能看文件详情，不再生成预览。
+     */
     fun refreshPreviews(context: Context) {
-        bind(context)
         previewJob?.cancel()
-        val cur = _state.value
-        if (cur.picked.isEmpty()) {
-            _state.value = cur.copy(previews = emptyList(), previewBusy = false)
-            return
-        }
-        previewJob = scope.launch {
-            val total = minOf(cur.picked.size, 20)
+        previewJob = null
+        if (_state.value.previews.isNotEmpty() || _state.value.previewBusy ||
+            _state.value.previewDone != 0 || _state.value.previewTotal != 0
+        ) {
             _state.value = _state.value.copy(
-                previews = emptyList(), previewBusy = true, previewDone = 0, previewTotal = total
+                previews = emptyList(),
+                previewBusy = false,
+                previewDone = 0,
+                previewTotal = 0
             )
-            val list = BatchEngine.buildPreviews(
-                context, cur.picked.map { it.uri }, cur.preset
-            ) { d, t -> _state.value = _state.value.copy(previewDone = d, previewTotal = t) }
-            _state.value = _state.value.copy(previews = list, previewBusy = false)
         }
     }
 

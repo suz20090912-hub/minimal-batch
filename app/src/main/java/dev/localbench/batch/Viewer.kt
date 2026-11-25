@@ -107,6 +107,7 @@ private val accent = Color(0xFFC7B3FF)
 fun ImageViewer(
     shots: List<Shot>,
     startIndex: Int,
+    viewOnly: Boolean = false,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onDismiss: () -> Unit
@@ -265,27 +266,29 @@ fun ImageViewer(
                             fontSize = 11.sp
                         )
                     }
-                    CircleIcon(Icons.Filled.Delete) { askDelete = true }
+                    if (!viewOnly) CircleIcon(Icons.Filled.Delete) { askDelete = true }
                     CircleIcon(Icons.Filled.Info) { info = true }
                 }
 
-                Row(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(scrimBottom)
-                        .safeDrawingPadding()
-                        .padding(top = 26.dp, bottom = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BarAction("分享", Icons.Filled.Share) {
-                        current?.let { shareImage(ctx, it.uri, it.name) }
-                    }
-                    BarAction("编辑", Icons.Filled.Edit) {
-                        zoomed = false
-                        cropping = false
-                        editShot = current
+                if (!viewOnly) {
+                    Row(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(scrimBottom)
+                            .safeDrawingPadding()
+                            .padding(top = 26.dp, bottom = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BarAction("分享", Icons.Filled.Share) {
+                            current?.let { shareImage(ctx, it.uri, it.name) }
+                        }
+                        BarAction("编辑", Icons.Filled.Edit) {
+                            zoomed = false
+                            cropping = false
+                            editShot = current
+                        }
                     }
                 }
             }
@@ -429,7 +432,7 @@ fun ImageViewer(
                 )
                 DetailRow("大小", sizeText(current.sizeKb))
                 DetailRow("格式", fmtOf(current.name))
-                DetailRow("位置", positionOf(ctx, current))
+                DetailRow("位置", if (viewOnly) "原图 · 只读" else positionOf(ctx, current))
             }
         }
 
