@@ -6,6 +6,8 @@
 
 无账号、无广告、不上传云端，选图 → 预览 → 处理 → 看图，四步走完
 
+[![latest release](https://img.shields.io/github/v/release/suz20090912-hub/minimal-batch?label=%E7%89%88%E6%9C%AC&color=2f81f7)](../../releases) [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE) [![minSdk](https://img.shields.io/badge/minSdk-29-brightgreen)](app/build.gradle.kts)
+
 </div>
 
 ---
@@ -110,6 +112,15 @@ minimal-batch/
 - **不申请存储权限**：走 MediaStore，Android 10+ 无需任何权限即可写入自己的输出。
 - **不联网**：没有网络权限，图片不出手机。
 - **不带历史记录**：退出即清空，减少 bug 面；要看旧图请直接从 `Pictures/极简批处理` 或系统相册打开。
+
+## 更新日志
+
+| 版本 | 日期 | 一句话 |
+|---|---|---|
+| **v1.1** | 2026-11-25 | 标题不再撞状态栏；选完图能看「原图 → 成品」真预览；处理完能直接进成品相册 |
+| v1.0 | 2026-11-24 | 首个可用版：压缩 / 改尺寸 / HEIC→JPG / 重命名 |
+
+每版**修掉了什么问题（原因 + 改法）、加了什么、还剩什么没解决**，都写在 [CHANGELOG.md](CHANGELOG.md)。安装包按版本在 [Releases](../../releases)。
 
 ## Roadmap
 
