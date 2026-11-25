@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.sp
 private const val REPO_URL = "https://github.com/suz20090912-hub/minimal-batch"
 
 @Composable
-fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit) {
+fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: () -> Unit) {
     val ctx = LocalContext.current
     val st by Session.state.collectAsState()
     var rootName by remember { mutableStateOf(Store.root(ctx)) }
@@ -173,6 +173,25 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit) {
 
         Spacer(Modifier.height(10.dp))
 
+        // ---------- 更新中心 ----------
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp)) {
+                Text("检查更新", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "只有你自己点的时候才联网。里面可以选镜像站、测速、配代理。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onOpenUpdate, modifier = Modifier.fillMaxWidth()) {
+                    Text("打开检查更新")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
         // ---------- 更新日志 / 关于 ----------
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp)) {
@@ -195,10 +214,10 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 InfoRow("版本", "v$version")
                 InfoRow("协议", "MIT")
-                InfoRow("权限", "无网络、无存储权限")
+                InfoRow("权限", "联网仅用于手动检查更新")
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "全部处理在本机完成，图片不上传。检查更新会在 v1.3 里单独做一个页面，" +
+                    "全部处理在本机完成，图片不上传。检查更新放在「设置 → 检查更新」里，" +
                         "只有你手动点的时候才联网。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -290,5 +309,6 @@ fun ChangelogScreen(onClose: () -> Unit) {
         }
     }
 }
+
 
 

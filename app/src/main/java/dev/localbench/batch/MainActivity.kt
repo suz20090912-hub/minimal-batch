@@ -103,6 +103,7 @@ fun BatchApp() {
     var focusDir by remember { mutableStateOf<String?>(null) }
     var galleryKey by remember { mutableIntStateOf(0) }
     var logOpen by remember { mutableStateOf(false) }
+    var updateOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { Session.init(ctx) }
     LaunchedEffect(st.batch) { if (st.batch != null) galleryKey++ }
@@ -111,6 +112,7 @@ fun BatchApp() {
         when {
             // 一层一层退：全屏图 → 更新日志 → 处理中挡住 → 非转换页回转换页 → 根页才问退不退出
             zoomList.isNotEmpty() -> zoomList = emptyList()
+            updateOpen -> updateOpen = false
             logOpen -> logOpen = false
             st.running && tab == 0 -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
             tab != 0 -> tab = 0
@@ -163,7 +165,8 @@ fun BatchApp() {
 
                 else -> SettingsScreen(
                     onOpenLog = { logOpen = true },
-                    onChanged = { galleryKey++ }
+                    onChanged = { galleryKey++ },
+                    onOpenUpdate = { updateOpen = true }
                 )
             }
         }
@@ -172,6 +175,7 @@ fun BatchApp() {
     if (zoomList.isNotEmpty()) {
         ImageViewer(zoomList, zoomIndex, onSaved = { galleryKey++ }) { zoomList = emptyList() }
     }
+    if (updateOpen) UpdateScreen { updateOpen = false }
     if (exitAsk) ExitDialog(st) { exitAsk = false }
     if (logOpen) ChangelogScreen { logOpen = false }
 }
@@ -427,6 +431,7 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
 
 
 
