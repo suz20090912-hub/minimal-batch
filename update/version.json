@@ -1,7 +1,7 @@
 {
-  "versionCode": 24,
-  "versionName": "1.4.0",
-  "notes": "首页右上角公告、设置里的交流群（QQ 1135338332）、外观三档（跟随系统/白/黑）、全局过渡动画（页签淡入、页面滑进滑出、进度条平滑、按钮回弹）；「关于」写明完全开源免费、不设赞助渠道。这一版起改用正式签名：从 1.3.x 升级要先卸载一次，之后可覆盖安装。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.4.0/minimal-batch-v1.4.0-release.apk",
-  "size": 18545128
+  "versionCode": 25,
+  "versionName": "1.5.0",
+  "notes": "自定义输出目录写完后，会主动通知系统相册刷新一次（仅内部存储卷有效）；成品页顶部新增「位置」切换，能翻回最近用过的输出目录（当前 + 最多 5 条历史）；交流群说明改为「不用只聊软件和图片，平常聊天也欢迎」。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.5.0/minimal-batch-v1.5.0-release.apk",
+  "size": 18562828
 }

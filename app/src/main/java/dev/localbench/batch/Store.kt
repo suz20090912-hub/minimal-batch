@@ -5,7 +5,9 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 
@@ -16,6 +18,9 @@ data class Shot(
     val sizeKb: Int,
     val dir: String
 )
+
+/** 一个用过的输出位置（Pictures 下的根目录，或某个自定义文件夹）。 */
+data class Location(val kind: String, val value: String, val label: String)
 
 /**
  * 输出位置的唯一入口。
@@ -31,8 +36,47 @@ object Store {
     const val DEFAULT_ROOT = "极简批处理"
     private const val K_ROOT = "out_root"
     private const val K_TREE = "out_tree"
+    private const val K_LOCS = "out_locs"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+
+    // ---------------- 位置历史 ----------------
+
+    /** 当前位置。 */
+    fun currentLocation(ctx: Context): Location {
+        val t = tree(ctx)
+        return if (t != null) {
+            val seg = t.lastPathSegment?.substringAfterLast(':')?.takeIf { it.isNotBlank() } ?: "文件夹"
+            Location("tree", t.toString(), "自定义：$seg")
+        } else {
+            Location("media", root(ctx), "Pictures/${root(ctx)}")
+        }
+    }
+
+    /** 当前位置在最前面，后面挂着用过的最多 5 个。 */
+    fun locations(ctx: Context): List<Location> {
+        val cur = currentLocation(ctx)
+        val stored = prefs(ctx).getStringSet(K_LOCS, emptySet()) ?: emptySet()
+        val parsed = stored.mapNotNull { raw ->
+            val p = raw.split("|", limit = 3)
+            if (p.size < 3) null else Location(p[0], p[1], p[2])
+        }
+        val out = ArrayList<Location>()
+        out += cur
+        parsed.forEach { if (it.kind != cur.kind || it.value != cur.value) out += it }
+        return out.distinctBy { "${it.kind}|${it.value}" }.take(6)
+    }
+
+    private fun rememberLocation(ctx: Context, loc: Location) {
+        val stored = prefs(ctx).getStringSet(K_LOCS, emptySet())?.toMutableSet() ?: mutableSetOf()
+        stored.removeAll { raw ->
+            val p = raw.split("|", limit = 3)
+            p.size >= 2 && p[0] == loc.kind && p[1] == loc.value
+        }
+        stored += "${loc.kind}|${loc.value}|${loc.label}"
+        while (stored.size > 5) stored.remove(stored.first())
+        prefs(ctx).edit().putStringSet(K_LOCS, stored).apply()
+    }
 
     // ---------------- 位置配置 ----------------
 
@@ -41,6 +85,7 @@ object Store {
 
     fun setRoot(ctx: Context, value: String) {
         prefs(ctx).edit().putString(K_ROOT, value.trim().ifBlank { DEFAULT_ROOT }).apply()
+        rememberLocation(ctx, currentLocation(ctx))
     }
 
     fun tree(ctx: Context): Uri? =
@@ -55,6 +100,7 @@ object Store {
         } catch (_: Throwable) {
         }
         prefs(ctx).edit().putString(K_TREE, uri.toString()).apply()
+        rememberLocation(ctx, currentLocation(ctx))
     }
 
     fun clearTree(ctx: Context) {
@@ -142,6 +188,15 @@ object Store {
             }
             val os = r.openOutputStream(target) ?: return null to "无法打开输出流"
             os.use { it.write(data) }
+            // 自定义目录不在 MediaStore 里，尽力通知一次扫描：系统相册能看见，就不用只靠 App 内看
+            runCatching {
+                val docId = DocumentsContract.getDocumentId(target)
+                if (docId.startsWith("primary:")) {
+                    val path = Environment.getExternalStorageDirectory().absolutePath +
+                        "/" + docId.removePrefix("primary:")
+                    MediaScannerConnection.scanFile(ctx, arrayOf(path), arrayOf("image/jpeg"), null)
+                }
+            }
             target to null
         } catch (t: Throwable) {
             null to (t.message ?: t.javaClass.simpleName)
@@ -162,17 +217,21 @@ object Store {
 
     // ---------------- 成品列表 ----------------
 
-    fun list(ctx: Context): List<Shot> {
-        val t = tree(ctx)
+    fun list(ctx: Context): List<Shot> = listAt(ctx, currentLocation(ctx))
+
+    /** 按某个位置扫成品；老目录也能翻回来看看。 */
+    fun listAt(ctx: Context, loc: Location): List<Shot> {
         return try {
-            if (t != null) listTree(ctx, t) else listMedia(ctx)
+            when (loc.kind) {
+                "tree" -> listTree(ctx, Uri.parse(loc.value))
+                else -> listMediaRoot(ctx, loc.value)
+            }
         } catch (_: Throwable) {
             emptyList()
         }
     }
 
-    private fun listMedia(ctx: Context): List<Shot> {
-        val rootName = root(ctx)
+    private fun listMediaRoot(ctx: Context, rootName: String): List<Shot> {
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
@@ -279,4 +338,5 @@ object Store {
         return null
     }
 }
+
 

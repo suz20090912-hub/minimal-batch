@@ -55,11 +55,13 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
     var loading by remember { mutableStateOf(true) }
     var dir by remember { mutableStateOf(focus ?: "全部") }
     var reload by remember { mutableStateOf(0) }
+    var loc by remember { mutableStateOf(Store.currentLocation(ctx)) }
+    val locs = remember(refreshKey, reload) { Store.locations(ctx) }
 
-    LaunchedEffect(refreshKey, focus, reload) {
-        if (focus != null) dir = focus
+    LaunchedEffect(focus) { if (focus != null) dir = focus }
+    LaunchedEffect(refreshKey, reload, loc) {
         loading = true
-        shots = withContext(Dispatchers.IO) { Store.list(ctx) }
+        shots = withContext(Dispatchers.IO) { Store.listAt(ctx, loc) }
         loading = false
     }
 
@@ -80,7 +82,7 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
             Column(Modifier.weight(1f)) {
                 Text("成品 · ${filtered.size} 张", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${Store.where(ctx)} · 共 ${mb(totalKb)}",
+                    "${loc.label} · 共 ${mb(totalKb)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -105,6 +107,21 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
         }
 
         Spacer(Modifier.height(8.dp))
+        if (locs.size > 1) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                locs.forEach { l ->
+                    FilterChip(
+                        selected = l.kind == loc.kind && l.value == loc.value,
+                        onClick = { loc = l; dir = "全部" },
+                        label = { Text(l.label) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+        }
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -134,7 +151,7 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
                     Text("这里还没有成品", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "去「转换」页选图、处理一批，回来就能在这里按场景查看。\n输出位置：${Store.where(ctx)}",
+                        "去「转换」页选图、处理一批，回来就能在这里按场景查看。\n当前位置：${loc.label}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

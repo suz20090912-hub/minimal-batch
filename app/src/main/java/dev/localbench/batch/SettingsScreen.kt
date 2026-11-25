@@ -147,8 +147,8 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "默认放在 Pictures 下，系统相册直接可见。选到别的位置后，系统相册可能不显示这些图，" +
-                        "请到「成品」页查看。换位置只影响以后的处理，老图不动。",
+                    "默认放在 Pictures 下，系统相册直接可见。选到别的位置后会尽量通知一次系统相册刷新；" +
+                        "万一相册里还是找不到，就到「成品」页看，那里能按位置切回来。换位置只影响以后的处理，老图不动。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -225,8 +225,8 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Text("QQ 群：1135338332", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "想交流、聊天，或者遇到 bug、有功能建议，都可以加这个群直接说。" +
-                        "群里不卖课、不推广，只聊这个工具和批量处理图片的事。",
+                    "想交流、聊天，或者遇到 bug、有功能建议，都可以加这个群。" +
+                        "不用只聊软件和图片，平常聊天也欢迎；群里不卖课、不推广。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
