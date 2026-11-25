@@ -75,6 +75,17 @@ object BatchEngine {
 
     const val OUT_FOLDER = "Pictures/极简批处理"
 
+    /** 预览产物：原图缩略图 + 处理后缩略图 + 预计体积。 */
+    data class Preview(
+        val picked: Picked,
+        val beforeThumb: Bitmap?,
+        val afterThumb: Bitmap?,
+        val outW: Int,
+        val outH: Int,
+        val estKb: Int,
+        val error: String? = null
+    )
+
     // ---------------- 预览 ----------------
 
     suspend fun inspectAll(ctx: Context, uris: List<Uri>): List<Picked> = coroutineScope {
@@ -182,16 +193,7 @@ object BatchEngine {
                 srcH = info.size.height
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 decoder.isMutableRequired = false
-                if (preset.square) {
-                    val short = min(srcW, srcH)
-                    if (short > preset.outW) {
-                        val f = preset.outW.toFloat() / short.toFloat()
-                        decoder.setTargetSize(max(1, (srcW * f).roundToInt()), preset.outW)
-                    }
-                } else if (preset.outW > 0 && srcW > preset.outW) {
-                    val f = preset.outW.toFloat() / srcW.toFloat()
-                    decoder.setTargetSize(preset.outW, max(1, (srcH * f).roundToInt()))
-                }
+                applyTargetSize(decoder, info.size.width, info.size.height, preset)
             }
 
             val out = buildOutput(decoded, preset)
@@ -249,6 +251,120 @@ object BatchEngine {
             prefix.trim() + "_" + seq.toString().padStart(3, '0') + ".jpg"
         }
     }
+
+    // ---------------- 预览 ----------------
+
+    /**
+     * 真预览：每张图按当前场景跑一遍完整链路（解码→缩放/裁方→编码），
+     * 只是不写文件，把缩略图和"预计体积"带回来。
+     */
+    suspend fun buildPreviews(
+        ctx: Context,
+        uris: List<Uri>,
+        preset: Preset,
+        limit: Int = 20,
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+    ): List<Preview> = coroutineScope {
+        val list = uris.take(limit)
+        val sem = Semaphore(3)
+        val done = AtomicInteger(0)
+        list.map { uri ->
+            async(Dispatchers.IO) {
+                sem.withPermit {
+                    val p = previewOne(ctx, uri, preset)
+                    val n = done.incrementAndGet()
+                    withContext(Dispatchers.Main) { onProgress(n, list.size) }
+                    p
+                }
+            }
+        }.awaitAll()
+    }
+
+    private fun previewOne(ctx: Context, uri: Uri, preset: Preset): Preview {
+        val p = inspect(ctx, uri)
+        val bytes = readAll(ctx, uri)
+        if (bytes.isEmpty()) return Preview(p, null, null, 0, 0, 0, "读取失败")
+
+        var before: Bitmap? = null
+        var beforeThumb: Bitmap? = null
+        var decoded: Bitmap? = null
+        var out: Bitmap? = null
+        var afterThumb: Bitmap? = null
+        try {
+            before = decodeSampled(bytes, 360)
+            beforeThumb = before
+
+            decoded = decodeForPreset(bytes, preset)
+            out = buildOutput(decoded, preset)
+            val bos = ByteArrayOutputStream()
+            out.compress(Bitmap.CompressFormat.JPEG, preset.quality, bos)
+            val kb = bos.size() / 1024
+            afterThumb = scaleToMax(out, 360)
+
+            return Preview(p, beforeThumb, afterThumb, out.width, out.height, kb)
+        } catch (t: Throwable) {
+            return Preview(p, beforeThumb, null, 0, 0, 0, t.message ?: t.javaClass.simpleName)
+        } finally {
+            if (afterThumb == null || afterThumb !== out) out?.recycle()
+            if (out == null || out !== decoded) decoded?.recycle()
+        }
+    }
+
+    private fun decodeForPreset(bytes: ByteArray, preset: Preset): Bitmap =
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { decoder, info, _ ->
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            decoder.isMutableRequired = false
+            applyTargetSize(decoder, info.size.width, info.size.height, preset)
+        }
+
+    private fun decodeSampled(bytes: ByteArray, maxSide: Int): Bitmap =
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { decoder, info, _ ->
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            decoder.isMutableRequired = false
+            val w = info.size.width
+            val h = info.size.height
+            val long = max(w, h)
+            if (long > maxSide) {
+                val f = maxSide.toFloat() / long.toFloat()
+                decoder.setTargetSize(max(1, (w * f).roundToInt()), max(1, (h * f).roundToInt()))
+            }
+        }
+
+    private fun scaleToMax(src: Bitmap, maxSide: Int): Bitmap {
+        val long = max(src.width, src.height)
+        if (long <= maxSide) return src
+        val f = maxSide.toFloat() / long.toFloat()
+        return Bitmap.createScaledBitmap(
+            src,
+            max(1, (src.width * f).roundToInt()),
+            max(1, (src.height * f).roundToInt()),
+            true
+        )
+    }
+
+    private fun applyTargetSize(decoder: ImageDecoder, w: Int, h: Int, preset: Preset) {
+        if (preset.square) {
+            val short = min(w, h)
+            if (short > preset.outW) {
+                val f = preset.outW.toFloat() / short.toFloat()
+                decoder.setTargetSize(max(1, (w * f).roundToInt()), preset.outW)
+            }
+        } else if (preset.outW > 0 && w > preset.outW) {
+            val f = preset.outW.toFloat() / w.toFloat()
+            decoder.setTargetSize(preset.outW, max(1, (h * f).roundToInt()))
+        }
+    }
+
+    /** 从图库 Uri 读一张缩略图（结果浏览用）。 */
+    suspend fun loadThumb(ctx: Context, uri: Uri, maxSide: Int): Bitmap? =
+        withContext(Dispatchers.IO) {
+            try {
+                val bytes = readAll(ctx, uri)
+                if (bytes.isEmpty()) null else decodeSampled(bytes, maxSide)
+            } catch (_: Throwable) {
+                null
+            }
+        }
 
     // ---------------- 撤销 ----------------
 
@@ -310,3 +426,4 @@ object BatchEngine {
         }
     }
 }
+
