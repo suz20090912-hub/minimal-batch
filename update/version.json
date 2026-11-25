@@ -1,7 +1,7 @@
 {
-  "versionCode": 22,
-  "versionName": "1.3.1",
-  "notes": "更新中心修两处：整页让开状态栏，标题和返回箭头不再压在时间和电量上；镜像站从 3 条加到 6 条（jsDelivr / ghproxy 加速 / gh-proxy.com / ghfast.top / GitHub 网页 raw / GitHub Raw），自动模式改成并发测速，一条挂了不拖住别的，也不用排队等超时。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.3.1/minimal-batch-v1.3.1-debug.apk",
-  "size": 24724402
+  "versionCode": 23,
+  "versionName": "1.3.2",
+  "notes": "更新中心：整页让开状态栏，标题与返回箭头不再压时间和电量；镜像站 3 条 → 6 条（jsDelivr / ghproxy 加速 / gh-proxy.com / ghfast.top / GitHub 网页 raw / GitHub Raw），自动测速改成六条并发，一条挂了不拖住其他；自动模式再读次快那条做交叉核对，CDN 缓存停在旧版本时不会误报「已是最新」。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.3.2/minimal-batch-v1.3.2-debug.apk",
+  "size": 24725702
 }

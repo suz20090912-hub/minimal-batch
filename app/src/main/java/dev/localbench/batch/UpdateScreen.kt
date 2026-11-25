@@ -157,10 +157,20 @@ fun UpdateScreen(onClose: () -> Unit) {
                 val pick = best ?: throw (last ?: IOException("所有镜像站都连不上"))
                 viaMirror = "${pick.name} · ${bestMs}ms"
                 stage = 2
+                // 自动模式下再读一条次快线路做交叉核对：CDN 缓存可能还停在旧版本，
+                // 只信一条会误报"已是最新"。两条都读到就取版本更高的那份。
+                val backup = if (mode == "manual") null else results
+                    .filter { it.second >= 0 && it.first.id != pick.id }
+                    .minByOrNull { it.second }?.first
                 val info = Update.fetch(pick.url, px)
+                val info2 = if (backup != null) {
+                    runCatching { Update.fetch(backup.url, px) }.getOrNull()
+                } else null
+                val chosen = if (info2 != null && info2.versionCode > info.versionCode) info2 else info
+                if (chosen !== info) viaMirror = "${pick.name} · ${bestMs}ms（${backup?.name} 报告更新，已采用）"
                 stage = 3
-                if (info.versionCode > currentCode) {
-                    release = info
+                if (chosen.versionCode > currentCode) {
+                    release = chosen
                 } else {
                     upToDate = true
                 }
