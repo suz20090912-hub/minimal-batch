@@ -165,6 +165,18 @@ fun ImageViewer(shot: Shot, onSaved: () -> Unit, onDismiss: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
+        // 吞掉落在看图页上的所有触摸。
+        // 没有这一层，凑到没有按钮的地方（比如顶栏中间的"编辑"标题）点几下，
+        // 触摸会穿透到下面 tab 里的成品网格，直接打开另一张图——用户看到的就是"乱跳"。
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { }
+        )
+
         // 图片层：仍然整块落在安全区内，不会被状态栏压住
         Box(Modifier.fillMaxSize().safeDrawingPadding()) {
             val b = work
@@ -257,8 +269,8 @@ fun ImageViewer(shot: Shot, onSaved: () -> Unit, onDismiss: () -> Unit) {
                 Text(
                     if (cropping) "裁剪" else "编辑",
                     modifier = Modifier.weight(1f),
-                    color = Color.White,
-                    fontSize = 15.sp,
+                    color = Color(0xFF98A1B0),
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center
                 )
                 TextAction(
