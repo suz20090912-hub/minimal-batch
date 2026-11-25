@@ -125,8 +125,18 @@ object Session {
         prefs(context).edit().remove(K_SEL).apply()
         _state.value = _state.value.copy(
             picked = emptyList(), previews = emptyList(),
-            previewBusy = false, previewDone = 0, previewTotal = 0
+            previewBusy = false, previewDone = 0, previewTotal = 0,
+            batch = null, notice = ""
         )
+    }
+
+    /**
+     * 只清掉转换页那张结果记录，让页面回到选图状态。
+     * 不碰任何文件：成品还在相册和成品页里，要删图得去成品页选。
+     */
+    fun dismissBatch() {
+        if (_state.value.batch == null && _state.value.notice.isEmpty()) return
+        _state.value = _state.value.copy(batch = null, notice = "")
     }
 
     fun setPreset(context: Context, preset: Preset) {

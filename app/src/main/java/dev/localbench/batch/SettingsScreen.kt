@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -325,35 +324,58 @@ fun ChangelogScreen(onClose: () -> Unit) {
             HorizontalDivider()
             Spacer(Modifier.height(6.dp))
             LazyColumn(Modifier.weight(1f)) {
-                items(text.lines()) { line ->
+                items(text.lines()) { raw ->
+                    val line = raw.replace("**", "").replace("`", "").trimEnd()
                     when {
                         line.startsWith("## ") -> Text(
                             line.removePrefix("## "),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 22.dp, bottom = 8.dp)
+                        )
+
+                        line.startsWith("### ") -> Text(
+                            line.removePrefix("### "),
                             style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                            modifier = Modifier.padding(top = 12.dp, bottom = 3.dp)
                         )
 
                         line.startsWith("# ") -> Text(
                             line.removePrefix("# "),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(bottom = 6.dp)
                         )
 
-                        line.startsWith("|") -> Text(
-                            line,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // 表格在手机窄屏上挤成一团，App 内直接不显示
+                        line.startsWith("|") || line.startsWith("---") -> Unit
 
-                        line.isBlank() -> Spacer(Modifier.height(4.dp))
+                        line.startsWith("- ") || line.startsWith("* ") -> Row(
+                            Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                        ) {
+                            Text(
+                                "·",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                line.removePrefix("- ").removePrefix("* "),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = 15.sp,
+                                    lineHeight = 25.sp
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        line.isBlank() -> Spacer(Modifier.height(8.dp))
 
                         else -> Text(
                             line,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(vertical = 1.dp)
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 15.sp,
+                                lineHeight = 25.sp
+                            ),
+                            modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
                 }
@@ -361,6 +383,7 @@ fun ChangelogScreen(onClose: () -> Unit) {
         }
     }
 }
+
 
 
 

@@ -217,6 +217,7 @@ fun BatchApp() {
                         onPrefix = { Session.setPrefix(it) },
                         onStart = { Session.start(ctx) },
                         onClear = { Session.clearPicked(ctx) },
+                        onDismissRecord = { Session.dismissBatch() },
                         onOpenPicked = { list, idx ->
                             zoomReadOnly = true
                             zoomList = list
@@ -320,6 +321,7 @@ fun ConvertScreen(
     onPrefix: (String) -> Unit,
     onStart: () -> Unit,
     onClear: () -> Unit,
+    onDismissRecord: () -> Unit,
     onOpenPicked: (List<Shot>, Int) -> Unit
 ) {
     val ctx = LocalContext.current
@@ -452,7 +454,8 @@ fun ConvertScreen(
                 if (batch != null) {
                     ResultCard(
                         batch = batch,
-                        notice = st.notice
+                        notice = st.notice,
+                        onDismiss = onDismissRecord
                     )
                 }
             }
@@ -506,7 +509,7 @@ fun PreviewCard(p: BatchEngine.Preview) {
 }
 
 @Composable
-fun ResultCard(batch: Batch, notice: String) {
+fun ResultCard(batch: Batch, notice: String, onDismiss: () -> Unit) {
     var expanded by remember(batch) { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
@@ -540,9 +543,17 @@ fun ResultCard(batch: Batch, notice: String) {
                     batch.items.forEach { d -> DoneRow(d) }
                 }
             }
-            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
+            Row(Modifier.fillMaxWidth()) {
+                TextButton(onClick = { expanded = !expanded }, modifier = Modifier.weight(1f)) {
+                    Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
+                }
+                TextButton(onClick = onDismiss) { Text("清除记录") }
             }
+            Text(
+                "只清这条记录，图片都还在；想删图去成品页长按选",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -582,6 +593,7 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
 
 
 
