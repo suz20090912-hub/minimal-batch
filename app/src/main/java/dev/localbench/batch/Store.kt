@@ -79,9 +79,14 @@ object Store {
     // ---------------- 写入 / 删除 ----------------
 
     fun save(ctx: Context, preset: Preset, fileName: String, data: ByteArray): Pair<Uri?, String?> {
+        return saveInto(ctx, preset.label, fileName, data)
+    }
+
+    /** 指定场景子目录写入，编辑后的新图也走这里 */
+    fun saveInto(ctx: Context, dir: String, fileName: String, data: ByteArray): Pair<Uri?, String?> {
         val t = tree(ctx)
-        return if (t != null) saveToTree(ctx, t, preset.label, fileName, data)
-        else saveToMedia(ctx, "${root(ctx)}/${preset.label}", fileName, data)
+        return if (t != null) saveToTree(ctx, t, dir, fileName, data)
+        else saveToMedia(ctx, "${root(ctx)}/$dir", fileName, data)
     }
 
     private fun saveToMedia(
@@ -274,3 +279,4 @@ object Store {
         return null
     }
 }
+

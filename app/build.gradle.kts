@@ -12,8 +12,8 @@ android {
         applicationId = "dev.localbench.batch"
         minSdk = 29
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.2.3"
+        versionCode = 16
+        versionName = "1.2.4"
     }
 
     buildTypes {
@@ -48,6 +48,7 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
 
 
 

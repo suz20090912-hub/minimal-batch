@@ -247,6 +247,9 @@ object BatchEngine {
         }
     }
 
+    /** 编辑后的图另存，质量 92 */
+    fun encodeEdited(src: Bitmap, quality: Int = 92): ByteArray = encodeJpeg(src, quality)
+
     /**
      * PNG / WebP 带透明通道时先合到白底再编码。
      * 否则 JPEG 不支持 alpha，透明区域会变成黑块。
@@ -401,6 +404,7 @@ object BatchEngine {
         return uri.lastPathSegment ?: "unknown"
     }
 }
+
 
 
 
