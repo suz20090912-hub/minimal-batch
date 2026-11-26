@@ -1,6 +1,6 @@
 # 极简批处理 · 项目进度总览
 
-> 整理时间：2026-11-26　当前版本：**v1.8.1（versionCode 38）**
+> 整理时间：2026-11-26　当前版本：**v1.9.0（versionCode 39）**
 > 仓库：https://github.com/suz20090912-hub/minimal-batch　协议：MIT　交流群：1135338332
 
 ## 一、这是什么
@@ -37,6 +37,7 @@
 | v1.7.3 | 36 | 按钮改回「清除记录」，点完直接空；删掉设置页「本次会话」卡片 |
 | v1.8.0 | 37 | 新增「导入文件夹」：整个目录（含子目录）一次进名单，追加不替换 |
 | v1.8.1 | 38 | 修「导入文件夹」选完目录必闪退：后台线程弹 Toast；补齐崩溃日志 |
+| v1.9.0 | 39 | 断点续跑：没跑完的批次下次接着跑；删掉设置页「默认场景」卡 |
 
 ## 三、已经定下来的设计（别再来回改）
 
@@ -85,6 +86,18 @@
 - 设置「本次会话」卡片改成纯说明，原来的「清空已选图片」删掉——它实际是清转换记录，和结果卡「清除记录」重复。
 - 现在三个动作各归一处：去掉某几张是转换页长按「移出」；整批不要是转换页「清空已选」；只清记录是结果卡「清除记录」。
 - `Session.clearPicked` 只保留转换页一个调用点。
+
+---
+
+### v1.9.0：一批没跑完，接着跑
+
+- 新文件 `ResumeStore.kt`：`filesDir/batch_resume.txt`，第一行表头（uris / preset / targetKb / webp / prefix / total / at），之后每完成一张追加一行 `Done`；追加写加 `synchronized`，进程被杀最多丢最后一张。
+- `BatchEngine.runBatch` 增加 `resume: Map<Int, Done>` 与 `onItem`：已完成的下标不进信号量，`items` 最后按 index 排序合并，结果卡仍是完整一批。
+- `Session.start`：uris 与 preset/targetKb/webp/prefix 全等才续，否则清旧断点起新批次。
+- `Session.init`：冷启动读断点并与 `K_SEL` 比对，对不上直接清；对上则置 `resumeDone/resumeTotal`。
+- 转换页按钮下方多一行："上一批没跑完：已完成 M/N 张，点「开始处理」会跳过做完的那 M 张接着跑"。
+- `setPicked` / `removePicked` / `clearPicked` / `resetPage` 四处都清断点；`cancelRun` 有意保留。
+- 顺带删掉设置页「默认场景」整卡（重复入口），`SettingsScreen` 不再 collect 会话状态。
 
 ---
 
@@ -141,9 +154,10 @@
 | v1.7.3 | 459046966 | 18,620,460 |
 | v1.8.0 | 459056845 | 18,637,372 |
 | v1.8.1 | 459066139 | 18,637,980 |
+| v1.9.0 | 459077112 | 18,638,384 |
 
-`update/version.json` 现为 38 / 1.8.1 / 18,637,980，APK 直链：
-`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.1/minimal-batch-v1.8.1-release.apk`
+`update/version.json` 现为 39 / 1.9.0 / 18,638,384，APK 直链：
+`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.0/minimal-batch-v1.9.0-release.apk`
 
 内置 6 条更新镜像：jsDelivr（`@main`，有 12h 级缓存）、ghproxy.net、gh-proxy.com、ghfast.top、GitHub raw、GitHub Raw 官方域名。
 
@@ -175,14 +189,14 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 1. **真机验收** v1.8.0 重点：选一个相机导出目录点「导入文件夹」，是否能扫到子目录里的图；扫描进度是否在动；导入完成后张数/体积对不对；先手动选两张再导文件夹，那两张是否还在。
 2. ~~目标大小压缩 + WebP~~（v1.7.0 已完成，等真机验收压缩是否真的进线）。
-3. ~~文件夹批量导入~~（v1.8.0 已完成）；**断点续跑**是下一个能力点。
+3. ~~文件夹批量导入~~（v1.8.0）、~~断点续跑~~（v1.9.0）已完成；下一个能力点待定（回收站式删除 / 原图网格显示预计体积 / 英文界面）。
 4. **截图补齐**：01-main / 02-preview / 03-result / 04-gallery 四张实机图进 `screenshots/`。
 5. 再往后：回收站式删除、原图网格显示预计体积、英文界面 / F-Droid。
 
 ## 九、文件都在哪
 
-- 开发工程：`batch-app/`（1.8.1）
+- 开发工程：`batch-app/`（1.9.0）
 - 仓库镜像：`minimal-batch/`（与开发工程一致，含 CHANGELOG / README / update/version.json）
 - 交付的安装包：`极简批处理-v1.7.3-release.apk`（历史版本 1.2.2 → 1.7.2 也在同目录）
 - 签名：`release-key/minimal-batch.jks` + `release-key/说明.txt`
-- 云主机：`~/ktcheck/batch-app`（1.8.1 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
+- 云主机：`~/ktcheck/batch-app`（1.9.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）

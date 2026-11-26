@@ -1,7 +1,7 @@
 {
-  "versionCode": 38,
-  "versionName": "1.8.1",
-  "notes": "修一个必崩的 bug：上一版点「导入文件夹」、选完目录点确定会直接闪退回桌面。原因是在后台线程弹 Toast，Android 11 之后这条路必抛异常。现在 toast 改成线程安全的，导入流程整段兜住异常，失败只会提示原因。另外新增崩溃记录，真崩了能在设置「关于」里一键复制堆栈。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.1/minimal-batch-v1.8.1-release.apk",
-  "size": 18637980
+  "versionCode": 39,
+  "versionName": "1.9.0",
+  "notes": "断点续跑：一批没跑完（被杀进程、手动停、手机重启），下次点「开始处理」会跳过已经做完的那几张接着跑，转换页会写清\"已完成 M/N 张\"。名单一改（重选、移出、清空）旧断点自动作废，不会串批。另：设置页的「默认场景」卡片删掉了——场景在转换页选，设置里放一份纯属重复。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.0/minimal-batch-v1.9.0-release.apk",
+  "size": 18638384
 }
