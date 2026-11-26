@@ -36,7 +36,9 @@ object Session {
         val totalCount: Int = 0,
         val batch: Batch? = null,
         val notice: String = "",
-        val restored: Boolean = false
+        val restored: Boolean = false,
+        val importing: Boolean = false,
+        val importMsg: String = ""
     )
 
     private const val K_SEL = "selection"
@@ -137,6 +139,64 @@ object Session {
             previewBusy = false, previewDone = 0, previewTotal = 0,
             batch = null, notice = ""
         )
+    }
+
+    /**
+     * 从一个文件夹（相机导出的目录、网盘下载目录之类）整批往里加。
+     *
+     * 加进去是"追加"而不是"替换"：已经在名单里的图会被跳过，所以可以先把几张
+     * 挑好的放进去，再往里补文件夹，凑成一批。
+     */
+    fun importFolder(context: Context, tree: Uri) {
+        bind(context)
+        val cur = _state.value
+        if (cur.importing || cur.running) return
+        scope.launch {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    tree, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            _state.value = _state.value.copy(importing = true, importMsg = "正在扫文件夹…")
+            val found = FolderScan.collect(context, tree) { n ->
+                _state.value = _state.value.copy(importMsg = "正在扫文件夹… 已找到 $n 张")
+            }
+            if (found.isEmpty()) {
+                _state.value = _state.value.copy(
+                    importing = false, importMsg = "", notice = ""
+                )
+                toast(context, "这个文件夹里没找到图片")
+                return@launch
+            }
+            if (found.size >= FolderScan.MAX_FILES) {
+                toast(context, "一次最多导入 ${FolderScan.MAX_FILES} 张，剩下的请分批来")
+            }
+            val old = _state.value.picked.map { it.uri }
+            val merged = (old + found).distinct()
+            val added = merged.size - old.size
+            if (added <= 0) {
+                _state.value = _state.value.copy(importing = false, importMsg = "")
+                toast(context, "这个文件夹里的图都已在名单里")
+                return@launch
+            }
+            _state.value = _state.value.copy(importMsg = "正在读取 0/${merged.size} 张…")
+            // 一次读 24 张，别把几千张同时丢进解码器
+            val items = ArrayList<Picked>(merged.size)
+            merged.chunked(24).forEach { chunk ->
+                items.addAll(BatchEngine.inspectAll(context, chunk))
+                _state.value = _state.value.copy(
+                    importMsg = "正在读取 ${items.size}/${merged.size} 张…"
+                )
+            }
+            prefs(context).edit()
+                .putStringSet(K_SEL, merged.map { it.toString() }.toSet())
+                .apply()
+            _state.value = _state.value.copy(
+                picked = items, importing = false, importMsg = "",
+                batch = null, notice = ""
+            )
+            toast(context, "从文件夹加入 $added 张，共 ${items.size} 张")
+        }
     }
 
     /**

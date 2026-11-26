@@ -214,6 +214,7 @@ fun BatchApp() {
                             noticeUnread = false
                         },
                         onPicked = { uris -> Session.setPicked(ctx, uris) },
+                        onImportFolder = { tree -> Session.importFolder(ctx, tree) },
                         onPreset = { p -> Session.setPreset(ctx, p) },
                         onTarget = { kb -> Session.setTargetKb(ctx, kb) },
                         onWebp = { on -> Session.setWebp(ctx, on) },
@@ -327,6 +328,7 @@ fun ConvertScreen(
     showNoticeDot: Boolean,
     onNotice: () -> Unit,
     onPicked: (List<Uri>) -> Unit,
+    onImportFolder: (Uri) -> Unit,
     onPreset: (Preset) -> Unit,
     onTarget: (Int) -> Unit,
     onWebp: (Boolean) -> Unit,
@@ -358,6 +360,10 @@ fun ConvertScreen(
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) onPicked(uris) }
+
+    val folderPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { tree -> if (tree != null) onImportFolder(tree) }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
         Row(
@@ -472,6 +478,7 @@ fun ConvertScreen(
 
         Spacer(Modifier.height(10.dp))
         val pickSrc = remember { MutableInteractionSource() }
+        val folderSrc = remember { MutableInteractionSource() }
         val startSrc = remember { MutableInteractionSource() }
         val batchRatio by animateFloatAsState(
             targetValue = if (st.totalCount == 0) 0f
@@ -482,19 +489,26 @@ fun ConvertScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { picker.launch(arrayOf("image/*")) },
-                enabled = !st.running,
+                enabled = !st.running && !st.importing,
                 interactionSource = pickSrc,
                 modifier = Modifier.weight(1f).pressScale(pickSrc)
             ) {
                 Text(if (st.picked.isEmpty()) "选择图片" else "重选（${st.picked.size} 张）")
             }
-            Button(
-                onClick = onStart,
-                enabled = st.picked.isNotEmpty() && !st.running,
-                interactionSource = startSrc,
-                modifier = Modifier.weight(1f).pressScale(startSrc)
-            ) { Text("开始处理") }
+            OutlinedButton(
+                onClick = { folderPicker.launch(null) },
+                enabled = !st.running && !st.importing,
+                interactionSource = folderSrc,
+                modifier = Modifier.weight(1f).pressScale(folderSrc)
+            ) { Text("导入文件夹") }
         }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onStart,
+            enabled = st.picked.isNotEmpty() && !st.running && !st.importing,
+            interactionSource = startSrc,
+            modifier = Modifier.fillMaxWidth().pressScale(startSrc)
+        ) { Text("开始处理") }
 
         if (st.picked.isNotEmpty() && !st.running && st.batch == null) {
             Spacer(Modifier.height(6.dp))
@@ -544,6 +558,7 @@ fun ConvertScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     when {
+                        st.importing -> st.importMsg.ifBlank { "正在导入…" }
                         trimming -> "已勾 ${trimSet.size} 张，点「移出」就不参与这批"
                         st.picked.isEmpty() -> "还没选图　点上面的「选择图片」开始"
                         else -> "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下放大，长按移出"
@@ -567,11 +582,15 @@ fun ConvertScreen(
                     }) { Text("取消") }
                 }
             }
+            if (st.importing) {
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
             Spacer(Modifier.height(6.dp))
             if (st.picked.isEmpty()) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        "点上面的「选择图片」开始挑图。",
+                        if (st.importing) "正在导入文件夹，稍等…" else "点上面的「选择图片」开始挑图。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
