@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
@@ -36,8 +38,22 @@ import androidx.compose.ui.unit.sp
 fun mb(kb: Int): String =
     if (kb >= 1024) "%.1fMB".format(kb / 1024.0) else "${kb}KB"
 
+/**
+ * 弹一句提示。
+ *
+ * 一定要能在后台线程调用：文件夹扫描、批处理这些活儿都在 IO 线程里跑，
+ * 直接在那个线程 new Toast 会抛 "Can't toast on a thread that has not called Looper.prepare()"。
+ * 顺手统一换成 applicationContext，Activity 已经退出也不会 BadToken。
+ */
 fun toast(ctx: Context, msg: String) {
-    Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
+    val app = ctx.applicationContext ?: ctx
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+        Toast.makeText(app, msg, Toast.LENGTH_SHORT).show()
+    } else {
+        Handler(Looper.getMainLooper()).post {
+            runCatching { Toast.makeText(app, msg, Toast.LENGTH_SHORT).show() }
+        }
+    }
 }
 
 fun copyText(ctx: Context, text: String, msg: String = "已复制") {

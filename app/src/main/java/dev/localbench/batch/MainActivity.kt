@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Session.bind(applicationContext)
         ThemeStore.init(applicationContext)
+        Crashes.install(applicationContext)
         setContent {
             val mode = ThemeStore.mode
             val systemDark = isSystemInDarkTheme()

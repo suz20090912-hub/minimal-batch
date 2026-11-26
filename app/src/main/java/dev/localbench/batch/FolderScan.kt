@@ -23,7 +23,8 @@ object FolderScan {
     fun collect(ctx: Context, tree: Uri, onFound: (Int) -> Unit): List<Uri> {
         val out = ArrayList<Uri>()
         val rootId = runCatching { DocumentsContract.getTreeDocumentId(tree) }.getOrNull() ?: return out
-        walk(ctx, tree, rootId, 0, out, onFound)
+        // 外部 provider 什么脾气都有，能扫多少算多少，别为了一个异常丢掉已经找到的
+        runCatching { walk(ctx, tree, rootId, 0, out, onFound) }
         onFound(out.size)
         return out
     }

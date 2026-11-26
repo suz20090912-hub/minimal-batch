@@ -261,6 +261,14 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                         toast(ctx, "没有能打开链接的应用")
                     }
                 }) { Text("在浏览器打开项目主页") }
+
+                // 只在真崩过之后才出现，平时看不到
+                val crash = remember { Crashes.read(ctx) }
+                if (crash.isNotBlank()) {
+                    TextButton(onClick = {
+                        copyText(ctx, crash, "崩溃日志已复制，可以发给开发者")
+                    }) { Text("上次崩溃日志（点击复制）") }
+                }
             }
         }
 
