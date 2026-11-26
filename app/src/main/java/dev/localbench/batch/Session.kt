@@ -155,12 +155,21 @@ object Session {
     }
 
     /**
-     * 只清掉转换页那张结果记录，让页面回到选图状态。
-     * 不碰任何文件：成品还在相册和成品页里，要删图得去成品页选。
+     * "清空重来"：把转换页恢复到刚打开的样子——记录没了、选图也没了。
+     * 只动这一页，成品文件一个不删，相册和成品页照旧。
      */
-    fun dismissBatch() {
-        if (_state.value.batch == null && _state.value.notice.isEmpty()) return
-        _state.value = _state.value.copy(batch = null, notice = "")
+    fun resetPage(context: Context) {
+        previewJob?.cancel()
+        prefs(context).edit().remove(K_SEL).apply()
+        _state.value = _state.value.copy(
+            picked = emptyList(),
+            previews = emptyList(),
+            previewBusy = false,
+            previewDone = 0,
+            previewTotal = 0,
+            batch = null,
+            notice = ""
+        )
     }
 
     fun setPreset(context: Context, preset: Preset) {

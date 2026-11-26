@@ -224,7 +224,10 @@ fun BatchApp() {
                             Session.removePicked(ctx, uris)
                             toast(ctx, "已移出 ${uris.size} 张，不参与这批")
                         },
-                        onDismissRecord = { Session.dismissBatch() },
+                        onResetPage = {
+                            Session.resetPage(ctx)
+                            toast(ctx, "这页已清空，成品还在成品页")
+                        },
                         onOpenPicked = { list, idx ->
                             zoomReadOnly = true
                             zoomList = list
@@ -331,7 +334,7 @@ fun ConvertScreen(
     onStart: () -> Unit,
     onClear: () -> Unit,
     onRemovePicked: (Set<Uri>) -> Unit,
-    onDismissRecord: () -> Unit,
+    onResetPage: () -> Unit,
     onOpenPicked: (List<Shot>, Int) -> Unit
 ) {
     val ctx = LocalContext.current
@@ -530,7 +533,7 @@ fun ConvertScreen(
                     ResultCard(
                         batch = batch,
                         notice = st.notice,
-                        onDismiss = onDismissRecord
+                        onDismiss = onResetPage
                     )
                 }
             }
@@ -540,8 +543,11 @@ fun ConvertScreen(
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (trimming) "已勾 ${trimSet.size} 张，点「移出」就不参与这批"
-                    else "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下放大，长按移出",
+                    when {
+                        trimming -> "已勾 ${trimSet.size} 张，点「移出」就不参与这批"
+                        st.picked.isEmpty() -> "还没选图　点上面的「选择图片」开始"
+                        else -> "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下放大，长按移出"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -565,7 +571,7 @@ fun ConvertScreen(
             if (st.picked.isEmpty()) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        "这批已经空了。点上面的「选择图片」重新挑。",
+                        "点上面的「选择图片」开始挑图。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -706,10 +712,10 @@ fun ResultCard(batch: Batch, notice: String, onDismiss: () -> Unit) {
                 TextButton(onClick = { expanded = !expanded }, modifier = Modifier.weight(1f)) {
                     Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
                 }
-                TextButton(onClick = onDismiss) { Text("清除记录") }
+                TextButton(onClick = onDismiss) { Text("清空重来") }
             }
             Text(
-                "只清这条记录，图片都还在；想删图去成品页长按选",
+                "这页清空、从头开始；成品一张不删，还在成品页",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -752,6 +758,7 @@ fun DoneRow(d: Done) {
         HorizontalDivider()
     }
 }
+
 
 
 
