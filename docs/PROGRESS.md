@@ -1,6 +1,6 @@
 # 极简批处理 · 项目进度总览
 
-> 整理时间：2026-11-25　当前版本：**v1.7.0（versionCode 33）**
+> 整理时间：2026-11-25　当前版本：**v1.7.1（versionCode 34）**
 > 仓库：https://github.com/suz20090912-hub/minimal-batch　协议：MIT　交流群：1135338332
 
 ## 一、这是什么
@@ -32,6 +32,7 @@
 | v1.6.1 | 31 | 结果卡加「清除记录」（只清记录不删图）；更新日志字号加大、去掉表格 |
 | v1.6.2 | 32 | 选图网格长按进「移出」模式，把不转的图从这批名单里拿掉，不用重选 |
 | v1.7.0 | 33 | 目标体积（500KB / 2MB / 自定义）真压缩；WebP 输出 |
+| v1.7.1 | 34 | 删掉设置里的「清空已选图片」，清空/移除统一到转换页 |
 
 ## 三、已经定下来的设计（别再来回改）
 
@@ -75,6 +76,14 @@
 
 ---
 
+### v1.7.1：清空入口不再重复
+
+- 设置「本次会话」卡片改成纯说明，原来的「清空已选图片」删掉——它实际是清转换记录，和结果卡「清除记录」重复。
+- 现在三个动作各归一处：去掉某几张是转换页长按「移出」；整批不要是转换页「清空已选」；只清记录是结果卡「清除记录」。
+- `Session.clearPicked` 只保留转换页一个调用点。
+
+---
+
 ## 五、发布记录
 
 | 版本 | Release id | APK 字节数 |
@@ -84,9 +93,10 @@
 | v1.6.1 | 458289715 | 18,586,808 |
 | v1.6.2 | 458307005 | 18,603,352 |
 | v1.7.0 | 459018603 | 18,620,052 |
+| v1.7.1 | 459027910 | 18,620,176 |
 
-`update/version.json` 现为 33 / 1.7.0 / 18,620,052，APK 直链：
-`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.0/minimal-batch-v1.7.0-release.apk`
+`update/version.json` 现为 34 / 1.7.1 / 18,620,176，APK 直链：
+`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.1/minimal-batch-v1.7.1-release.apk`
 
 内置 6 条更新镜像：jsDelivr（`@main`，有 12h 级缓存）、ghproxy.net、gh-proxy.com、ghfast.top、GitHub raw、GitHub Raw 官方域名。
 
@@ -124,8 +134,8 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 ## 九、文件都在哪
 
-- 开发工程：`batch-app/`（1.7.0）
+- 开发工程：`batch-app/`（1.7.1）
 - 仓库镜像：`minimal-batch/`（与开发工程一致，含 CHANGELOG / README / update/version.json）
 - 交付的安装包：`极简批处理-v1.6.0/1.6.1/1.6.2-release.apk`（历史版本 1.2.2 → 1.5.4 也在同目录）
 - 签名：`release-key/minimal-batch.jks` + `release-key/说明.txt`
-- 云主机：`~/ktcheck/batch-app`（1.7.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v16*.log`
+- 云主机：`~/ktcheck/batch-app`（1.7.1 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v16*.log`
