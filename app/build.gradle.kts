@@ -18,8 +18,8 @@ android {
         applicationId = "dev.localbench.batch"
         minSdk = 29
         targetSdk = 35
-        versionCode = 35
-        versionName = "1.7.2"
+        versionCode = 36
+        versionName = "1.7.3"
     }
 
     signingConfigs {

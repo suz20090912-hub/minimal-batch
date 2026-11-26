@@ -226,7 +226,7 @@ fun BatchApp() {
                         },
                         onResetPage = {
                             Session.resetPage(ctx)
-                            toast(ctx, "这页已清空，成品还在成品页")
+                            toast(ctx, "记录已清除")
                         },
                         onOpenPicked = { list, idx ->
                             zoomReadOnly = true
@@ -712,13 +712,8 @@ fun ResultCard(batch: Batch, notice: String, onDismiss: () -> Unit) {
                 TextButton(onClick = { expanded = !expanded }, modifier = Modifier.weight(1f)) {
                     Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
                 }
-                TextButton(onClick = onDismiss) { Text("清空重来") }
+                TextButton(onClick = onDismiss) { Text("清除记录") }
             }
-            Text(
-                "这页清空、从头开始；成品一张不删，还在成品页",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
