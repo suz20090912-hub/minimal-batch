@@ -107,22 +107,33 @@ fun GalleryScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
+                val outside = if (selecting) selected.count { key -> shots.none { it.uri.toString() == key } } else 0
                 Text(
                     if (selecting) "已选 ${selected.size} 张" else "成品 · ${filtered.size} 张",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    if (selecting) "再点图片可以加减选择" else "${loc.label} · 共 ${mb(totalKb)}",
+                    if (selecting) {
+                        if (outside > 0) "其中 $outside 张在别的场景里，切「全部」能看到"
+                        else "再点图片可以加减选择"
+                    } else "${loc.label} · 共 ${mb(totalKb)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (selecting) {
-                val allOn = filtered.isNotEmpty() && filtered.all { it.uri.toString() in selected }
+                // 全选是按"全部成品"算，不是当前这个场景：切了场景也能一次选完
+                val allOn = shots.isNotEmpty() && shots.all { it.uri.toString() in selected }
                 Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                     TextButton(onClick = {
-                        selected = if (allOn) emptySet() else filtered.map { it.uri.toString() }.toSet()
-                    }) { Text(if (allOn) "清空" else "全选") }
+                        if (allOn) {
+                            selected = emptySet()
+                        } else {
+                            // 选完把视图切到「全部」，让人看见自己到底选了什么
+                            dir = "全部"
+                            selected = shots.map { it.uri.toString() }.toSet()
+                        }
+                    }) { Text(if (allOn) "清空" else "全选 ${shots.size}") }
                     TextButton(onClick = { askDelete = true }, enabled = selected.isNotEmpty()) {
                         Text("删除")
                     }
@@ -228,16 +239,31 @@ fun GalleryScreen(
         }
 
         if (askDelete) {
+            val victims = shots.filter { it.uri.toString() in selected }
             AlertDialog(
                 onDismissRequest = { askDelete = false },
-                title = { Text("删除选中的 ${selected.size} 张？") },
-                text = { Text("会先放进「最近删除」，${Trash.KEEP_DAYS} 天内能还原；系统相册里会立刻消失，原图不动。") },
+                title = { Text("删除选中的 ${victims.size} 张？") },
+                text = {
+                    Column {
+                        Text("会先放进「最近删除」，${Trash.KEEP_DAYS} 天内能还原；系统相册里会立刻消失，原图不动。")
+                        if (victims.map { it.dir }.distinct().size > 1) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "涉及 " + victims.groupBy { it.dir }
+                                    .map { "${it.key} ${it.value.size} 张" }
+                                    .joinToString("、"),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
                 confirmButton = {
                     TextButton(onClick = {
                         askDelete = false
-                        val victims = filtered.filter { it.uri.toString() in selected }
                         selecting = false
                         selected = emptySet()
+                        // 跨场景删完，视图留在单个场景里会看到空，干脆切回全部
+                        if (victims.map { it.dir }.distinct().size > 1) dir = "全部"
                         scope.launch {
                             val n = withContext(Dispatchers.IO) {
                                 victims.count { Trash.moveIn(ctx, loc, it) }
