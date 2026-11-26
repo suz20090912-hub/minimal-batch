@@ -1,7 +1,7 @@
 {
-  "versionCode": 40,
-  "versionName": "1.9.1",
-  "notes": "修断点续跑：上一版断点按\"第几张\"记，图片顺序一变就对不上、还会跳错图；现在按图片本身记。选图清单也从无序集合改成按顺序存，重启后不会因为顺序乱掉把断点当脏数据清掉——这就是\"杀进程重启续不上\"的真凶。这一版没加新功能。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.1/minimal-batch-v1.9.1-release.apk",
-  "size": 18638600
+  "versionCode": 41,
+  "versionName": "1.10.0",
+  "notes": "最近删除：成品页和看图页删掉的图不直接消失，先进「最近删除」留 7 天。成品页右上「最近删除 N」能进去一张张还原，也能彻底删掉；过了 7 天开 App 自动清掉。删掉的图在系统相册里仍然是立刻消失，图存在 App 私有目录。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.10.0/minimal-batch-v1.10.0-release.apk",
+  "size": 18720700
 }
