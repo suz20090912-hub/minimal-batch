@@ -167,9 +167,10 @@
 | v1.8.0 | 459056845 | 18,637,372 |
 | v1.8.1 | 459066139 | 18,637,980 |
 | v1.9.0 | 459077112 | 18,638,384 |
+| v1.9.1 | 459092390 | 18,638,600 |
 
-`update/version.json` 现为 39 / 1.9.0 / 18,638,384，APK 直链：
-`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.0/minimal-batch-v1.9.0-release.apk`
+`update/version.json` 现为 40 / 1.9.1 / 18,638,600，APK 直链：
+`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.1/minimal-batch-v1.9.1-release.apk`
 
 内置 6 条更新镜像：jsDelivr（`@main`，有 12h 级缓存）、ghproxy.net、gh-proxy.com、ghfast.top、GitHub raw、GitHub Raw 官方域名。
 
@@ -201,14 +202,14 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 1. **真机验收** v1.8.0 重点：选一个相机导出目录点「导入文件夹」，是否能扫到子目录里的图；扫描进度是否在动；导入完成后张数/体积对不对；先手动选两张再导文件夹，那两张是否还在。
 2. ~~目标大小压缩 + WebP~~（v1.7.0 已完成，等真机验收压缩是否真的进线）。
-3. ~~文件夹批量导入~~（v1.8.0）、~~断点续跑~~（v1.9.0）已完成；下一个能力点待定（回收站式删除 / 原图网格显示预计体积 / 英文界面）。
+3. ~~文件夹批量导入~~（v1.8.0）、~~断点续跑~~（v1.9.0 加、v1.9.1 修好）已完成；下一个能力点待定（回收站式删除 / 原图网格显示预计体积 / 英文界面）。
 4. **截图补齐**：01-main / 02-preview / 03-result / 04-gallery 四张实机图进 `screenshots/`。
 5. 再往后：回收站式删除、原图网格显示预计体积、英文界面 / F-Droid。
 
 ## 九、文件都在哪
 
-- 开发工程：`batch-app/`（1.9.0）
+- 开发工程：`batch-app/`（1.9.1）
 - 仓库镜像：`minimal-batch/`（与开发工程一致，含 CHANGELOG / README / update/version.json）
 - 交付的安装包：`极简批处理-v1.7.3-release.apk`（历史版本 1.2.2 → 1.7.2 也在同目录）
 - 签名：`release-key/minimal-batch.jks` + `release-key/说明.txt`
-- 云主机：`~/ktcheck/batch-app`（1.9.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
+- 云主机：`~/ktcheck/batch-app`（1.9.1 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
