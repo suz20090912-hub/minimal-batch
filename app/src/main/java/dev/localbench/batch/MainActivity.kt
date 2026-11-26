@@ -511,6 +511,16 @@ fun ConvertScreen(
             modifier = Modifier.fillMaxWidth().pressScale(startSrc)
         ) { Text("开始处理") }
 
+        if (st.resumeTotal > 0 && !st.running && st.batch == null && !st.importing) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "上一批没跑完：已完成 ${st.resumeDone}/${st.resumeTotal} 张，" +
+                    "点「开始处理」会跳过做完的那 ${st.resumeDone} 张接着跑",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
         if (st.picked.isNotEmpty() && !st.running && st.batch == null) {
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(

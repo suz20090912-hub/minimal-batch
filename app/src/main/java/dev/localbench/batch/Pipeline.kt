@@ -158,24 +158,33 @@ object BatchEngine {
         lanes: Int,
         prefix: String,
         plan: OutputPlan = OutputPlan(),
+        /** 上次已经做完的那些（索引 → 结果），这些不再重复处理。 */
+        resume: Map<Int, Done> = emptyMap(),
+        /** 每做完一张回调一次，用于写断点文件。 */
+        onItem: (index: Int, done: Done) -> Unit = { _, _ -> },
         onProgress: (done: Int, total: Int) -> Unit
     ): Batch = coroutineScope {
         val sem = Semaphore(lanes.coerceIn(1, 8))
-        val done = AtomicInteger(0)
+        val done = AtomicInteger(resume.size)
         val t0 = SystemClock.elapsedRealtime()
+        val total = uris.size
+        withContext(Dispatchers.Main) { onProgress(resume.size, total) }
 
-        val items = uris.mapIndexed { index, uri ->
-            async(Dispatchers.IO) {
+        val fresh = uris.mapIndexedNotNull { index, uri ->
+            if (index in resume) null
+            else async(Dispatchers.IO) {
                 sem.withPermit {
                     val item = process(ctx, uri, preset, prefix, index + 1, plan)
+                    runCatching { onItem(index, item) }
                     val n = done.incrementAndGet()
-                    withContext(Dispatchers.Main) { onProgress(n, uris.size) }
-                    item
+                    withContext(Dispatchers.Main) { onProgress(n, total) }
+                    index to item
                 }
             }
         }.awaitAll()
 
-        Batch(preset, SystemClock.elapsedRealtime() - t0, items, plan)
+        val all = (resume.toList() + fresh).sortedBy { it.first }.map { it.second }
+        Batch(preset, SystemClock.elapsedRealtime() - t0, all, plan)
     }
 
     private fun process(

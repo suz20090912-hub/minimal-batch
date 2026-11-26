@@ -30,7 +30,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +45,6 @@ private const val REPO_URL = "https://github.com/suz20090912-hub/minimal-batch"
 @Composable
 fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: () -> Unit) {
     val ctx = LocalContext.current
-    val st by Session.state.collectAsState()
     var rootName by remember { mutableStateOf(Store.root(ctx)) }
     var custom by remember { mutableStateOf(Store.isCustom(ctx)) }
 
@@ -151,25 +149,6 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-        }
-
-        Spacer(Modifier.height(10.dp))
-
-        // ---------- 默认场景 ----------
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp)) {
-                Text("默认场景", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Preset.entries.forEach { p ->
-                        FilterChip(
-                            selected = st.preset == p,
-                            onClick = { Session.setPreset(ctx, p) },
-                            label = { Text(p.label) }
-                        )
-                    }
-                }
             }
         }
 

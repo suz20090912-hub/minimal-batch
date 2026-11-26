@@ -38,7 +38,10 @@ object Session {
         val notice: String = "",
         val restored: Boolean = false,
         val importing: Boolean = false,
-        val importMsg: String = ""
+        val importMsg: String = "",
+        /** 上次没跑完的那批：已完成张数 / 总张数，0 就是没有。 */
+        val resumeDone: Int = 0,
+        val resumeTotal: Int = 0
     )
 
     private const val K_SEL = "selection"
@@ -83,6 +86,21 @@ object Session {
 
         val saved = p.getStringSet(K_SEL, emptySet()).orEmpty()
             .mapNotNull { runCatching { Uri.parse(it) }.getOrNull() }
+
+        // 上次是不是有一批没跑完？只有跟当前选图对得上才算数，否则当脏数据清掉
+        val resume = ResumeStore.load(context)
+        if (resume != null) {
+            val same = resume.first.uris.map { it.toString() } == saved.map { it.toString() }
+            if (same) {
+                _state.value = _state.value.copy(
+                    resumeDone = resume.second.size,
+                    resumeTotal = resume.first.uris.size
+                )
+            } else {
+                ResumeStore.clear(context)
+            }
+        }
+
         if (saved.isEmpty()) return
 
         scope.launch {
@@ -111,6 +129,7 @@ object Session {
     fun setPicked(context: Context, uris: List<Uri>) {
         if (uris.isEmpty()) return
         bind(context)
+        ResumeStore.clear(context)
         scope.launch {
             uris.forEach {
                 try {
@@ -125,7 +144,8 @@ object Session {
                 .putStringSet(K_SEL, uris.map { u -> u.toString() }.toSet())
                 .apply()
             _state.value = _state.value.copy(
-                picked = items, batch = null, notice = ""
+                picked = items, batch = null, notice = "",
+                resumeDone = 0, resumeTotal = 0
             )
             refreshPreviews(context)
         }
@@ -134,10 +154,12 @@ object Session {
     fun clearPicked(context: Context) {
         previewJob?.cancel()
         prefs(context).edit().remove(K_SEL).apply()
+        ResumeStore.clear(context)
         _state.value = _state.value.copy(
             picked = emptyList(), previews = emptyList(),
             previewBusy = false, previewDone = 0, previewTotal = 0,
-            batch = null, notice = ""
+            batch = null, notice = "",
+            resumeDone = 0, resumeTotal = 0
         )
     }
 
@@ -213,7 +235,12 @@ object Session {
         prefs(context).edit()
             .putStringSet(K_SEL, left.map { it.uri.toString() }.toSet())
             .apply()
-        _state.value = _state.value.copy(picked = left, batch = null, notice = "")
+        // 名单变了，上次的断点就不作数了
+        ResumeStore.clear(context)
+        _state.value = _state.value.copy(
+            picked = left, batch = null, notice = "",
+            resumeDone = 0, resumeTotal = 0
+        )
     }
 
     /**
@@ -223,6 +250,7 @@ object Session {
     fun resetPage(context: Context) {
         previewJob?.cancel()
         prefs(context).edit().remove(K_SEL).apply()
+        ResumeStore.clear(context)
         _state.value = _state.value.copy(
             picked = emptyList(),
             previews = emptyList(),
@@ -230,7 +258,9 @@ object Session {
             previewDone = 0,
             previewTotal = 0,
             batch = null,
-            notice = ""
+            notice = "",
+            resumeDone = 0,
+            resumeTotal = 0
         )
     }
 
@@ -287,14 +317,40 @@ object Session {
         if (cur.running || cur.picked.isEmpty()) return
         previewJob?.cancel()
         runJob = scope.launch {
+            val uris = cur.picked.map { it.uri }
+
+            // 能续就续：上次那批的清单跟现在一模一样，就跳过已经做完的那几张
+            val resume = ResumeStore.load(context)
+            val canResume = resume != null &&
+                resume.first.uris.map { it.toString() } == uris.map { it.toString() } &&
+                resume.first.preset == cur.preset &&
+                resume.first.targetKb == cur.targetKb &&
+                resume.first.webp == cur.webp &&
+                resume.first.prefix == _state.value.prefix
+
+            val doneMap: Map<Int, Done> = if (canResume) resume!!.second else {
+                ResumeStore.clear(context)
+                ResumeStore.begin(
+                    context,
+                    ResumeStore.Header(uris, cur.preset, cur.targetKb, cur.webp, _state.value.prefix)
+                )
+                emptyMap()
+            }
+
             _state.value = _state.value.copy(
-                running = true, doneCount = 0, totalCount = cur.picked.size,
-                batch = null, notice = "", previewBusy = false
+                running = true,
+                doneCount = doneMap.size,
+                totalCount = uris.size,
+                batch = null, notice = "", previewBusy = false,
+                resumeDone = 0, resumeTotal = 0
             )
             val b = BatchEngine.runBatch(
-                context, cur.picked.map { it.uri }, cur.preset, 3, _state.value.prefix,
-                OutputPlan(cur.targetKb, cur.webp)
+                context, uris, cur.preset, 3, _state.value.prefix,
+                OutputPlan(cur.targetKb, cur.webp),
+                resume = doneMap,
+                onItem = { i, d -> ResumeStore.append(context, i, d) }
             ) { d, t -> _state.value = _state.value.copy(doneCount = d, totalCount = t) }
+            ResumeStore.clear(context)
             _state.value = _state.value.copy(running = false, batch = b)
         }
     }
