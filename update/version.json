@@ -1,7 +1,7 @@
 {
-  "versionCode": 41,
-  "versionName": "1.10.0",
-  "notes": "最近删除：成品页和看图页删掉的图不直接消失，先进「最近删除」留 7 天。成品页右上「最近删除 N」能进去一张张还原，也能彻底删掉；过了 7 天开 App 自动清掉。删掉的图在系统相册里仍然是立刻消失，图存在 App 私有目录。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.10.0/minimal-batch-v1.10.0-release.apk",
-  "size": 18720700
+  "versionCode": 42,
+  "versionName": "1.11.0",
+  "notes": "选图网格每张标出处理后大概多大：左下角「约 320KB」，右下角「原 1.2MB」，一眼看对比。设了目标体积就直接标「≤1.2MB」，不再给估算。换场景 / 改体积 / 开 WebP 会重算，只算屏幕上出现的那几张，划走取消、算过的记住。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.11.0/minimal-batch-v1.11.0-release.apk",
+  "size": 18721016
 }
