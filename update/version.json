@@ -1,7 +1,7 @@
 {
-  "versionCode": 32,
-  "versionName": "1.6.2",
-  "notes": "选图网格里长按任意一张就进「移出」模式：再点几张加减勾选，点顶部「移出」只把这几张从这批里拿掉，原图不动也不删，剩下的张数和总体积立刻跟着变。不用为了去掉一张重新去相册翻一遍。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.6.2/minimal-batch-v1.6.2-release.apk",
-  "size": 18603352
+  "versionCode": 33,
+  "versionName": "1.7.0",
+  "notes": "新增目标体积：不限 / ≤500KB / ≤2MB / 自定义，真压不是估——超线先逐档降质量，还超再缩尺寸，长边最低 640。另有 WebP 开关，同样画质体积更小（微信、部分图床不认）。文件名后缀跟着格式走。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.0/minimal-batch-v1.7.0-release.apk",
+  "size": 18620052
 }
