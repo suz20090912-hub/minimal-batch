@@ -1,7 +1,7 @@
 {
-  "versionCode": 44,
-  "versionName": "1.13.0",
-  "notes": "换白色 / 黑色时整套颜色缓过来了，不再一下跳过去；两套配色补全到卡片、弹层、底栏，深色下不再发灰。圆角和标题字重调过一遍，布局没动。全 App 文案重写成短句，去掉那些绕口的说明。顺手修了三个平时测不出来的问题：点「停下」其实没停住、停止状态被进度盖回去、处理中断后一直卡在「处理中」。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.0/minimal-batch-v1.13.0-release.apk",
-  "size": 18737992
+  "versionCode": 45,
+  "versionName": "1.13.1",
+  "notes": "桌面图标换成自己的样子了：紫色底、叠放的照片压一个向下箭头，跟软件主色一致，不再是系统默认的小机器人。顺手清了两处重复的字：转换页空态不再上下两行都写「还没选图」，成品页没有图时不再显示「共 0KB」。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.1/minimal-batch-v1.13.1-release.apk",
+  "size": 18834764
 }
