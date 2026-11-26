@@ -181,17 +181,11 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Text("本次会话", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "已选 ${st.picked.size} 张，选图会在下次打开时自动恢复。",
+                    if (st.picked.isEmpty()) "这批还没选图。选好的图会在下次打开时自动恢复。"
+                    else "已选 ${st.picked.size} 张。要去掉某几张，到转换页长按图片「移出」；整批不要了，转换页有「清空已选」。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = {
-                        Session.clearPicked(ctx)
-                        toast(ctx, "已清空选择")
-                    }
-                ) { Text("清空已选图片") }
             }
         }
 
