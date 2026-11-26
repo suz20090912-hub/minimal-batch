@@ -360,6 +360,7 @@ fun ConvertScreen(
 ) {
     val ctx = LocalContext.current
     val shots = remember(st.picked) { st.picked.map { Shot(it.uri, it.name, it.sizeKb, "") } }
+    val pickedBy = remember(st.picked) { st.picked.associateBy { it.uri } }
     // 长按一张进入"移出"模式：勾几张，点「移出」就只把这几张从这批里拿掉，原图不动
     var trimming by remember { mutableStateOf(false) }
     var trimSet by remember { mutableStateOf(emptySet<Uri>()) }
@@ -632,10 +633,19 @@ fun ConvertScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     itemsIndexed(shots, key = { _, s -> s.uri.toString() }) { i, s ->
+                        val src = pickedBy[s.uri]
                         ShotTile(
                             shot = s,
                             selecting = trimming,
                             selected = s.uri in trimSet,
+                            est = src?.let {
+                                EstSpec(
+                                    preset = st.preset,
+                                    plan = OutputPlan(st.targetKb, st.webp),
+                                    w = it.w,
+                                    h = it.h
+                                )
+                            },
                             onClick = {
                                 if (trimming) {
                                     trimSet = if (s.uri in trimSet) trimSet - s.uri else trimSet + s.uri

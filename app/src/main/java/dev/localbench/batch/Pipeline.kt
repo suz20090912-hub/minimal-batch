@@ -106,6 +106,82 @@ object BatchEngine {
         val error: String? = null
     )
 
+    // ---------------- 体积预估 ----------------
+
+    /** 预估结果缓存，键是 图 + 预设 + 目标体积 + 格式，滚动来回不会再算一遍。 */
+    private val estCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /** 按预设算出来的输出尺寸（与 applyTargetSize / buildOutput 同一口径）。 */
+    fun outSizeOf(w: Int, h: Int, preset: Preset): Pair<Int, Int> {
+        if (preset.square) {
+            val side = min(w, h).coerceAtLeast(1)
+            return if (preset.outW > 0 && side > preset.outW) preset.outW to preset.outW
+            else side to side
+        }
+        return if (preset.outW == 0 || w <= preset.outW) w to h
+        else preset.outW to max(1, (h.toFloat() * preset.outW.toFloat() / w.toFloat()).roundToInt())
+    }
+
+    /**
+     * 选图时给每张标个"大概多大"。
+     *
+     * 设了目标体积就不算了——那本来就是承诺压到这个数以内。
+     * 没设目标体积时不真跑全图（50MP 一张几百毫秒，几十张太慢），
+     * 而是解码到长边 480 的小图、用同一个编码器和同一个质量真压一次，
+     * 再按面积比例外推。小图每像素开销比大图略高，乘 0.9 修一下，界面标"约"。
+     */
+    suspend fun estimateKb(
+        ctx: Context,
+        picked: Picked,
+        preset: Preset,
+        plan: OutputPlan
+    ): Int? = withContext(Dispatchers.IO) {
+        if (plan.targetKb > 0) return@withContext plan.targetKb
+        if (picked.w <= 0 || picked.h <= 0) return@withContext null
+        val key = picked.uri.toString() + "|" + preset.name + "|" + plan.targetKb + "|" + plan.webp
+        estCache[key]?.let { return@withContext it }
+
+        val bytes = runCatching { readAll(ctx, picked.uri) }.getOrNull()
+        if (bytes == null || bytes.isEmpty()) return@withContext null
+
+        val (ow, oh) = outSizeOf(picked.w, picked.h, preset)
+        val long = max(ow, oh).coerceAtLeast(1)
+        val scale = min(long, 480).toFloat() / long.toFloat()
+
+        var sw = 0
+        var sh = 0
+        val bmp = runCatching {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { d, info, _ ->
+                val w = info.size.width
+                val h = info.size.height
+                sw = max(1, (w * scale).roundToInt())
+                sh = max(1, (h * scale).roundToInt())
+                d.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                d.isMutableRequired = false
+                d.setTargetSize(sw, sh)
+            }
+        }.getOrNull() ?: return@withContext null
+
+        val data = try {
+            val bos = ByteArrayOutputStream()
+            val fmt = if (plan.webp && canWebp()) Bitmap.CompressFormat.WEBP_LOSSY
+            else Bitmap.CompressFormat.JPEG
+            bmp.compress(fmt, preset.quality.coerceIn(1, 100), bos)
+            bos.toByteArray()
+        } catch (_: Throwable) {
+            ByteArray(0)
+        } finally {
+            bmp.recycle()
+        }
+        if (data.isEmpty() || sw <= 0 || sh <= 0) return@withContext null
+
+        val samplePixels = sw.toLong() * sh.toLong()
+        val outPixels = ow.toLong() * oh.toLong()
+        val est = (data.size.toDouble() * outPixels / samplePixels * 0.9 / 1024.0).roundToInt()
+        if (est > 0) estCache[key] = est
+        est
+    }
+
     // ---------------- 预览 ----------------
 
     suspend fun inspectAll(ctx: Context, uris: List<Uri>): List<Picked> = coroutineScope {

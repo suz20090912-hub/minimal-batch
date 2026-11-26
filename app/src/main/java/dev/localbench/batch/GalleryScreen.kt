@@ -253,17 +253,35 @@ fun GalleryScreen(
     }
 }
 
+/** 给选图网格用的"预计体积"参数。 */
+data class EstSpec(val preset: Preset, val plan: OutputPlan, val w: Int, val h: Int)
+
 @Composable
 fun ShotTile(
     shot: Shot,
     selecting: Boolean = false,
     selected: Boolean = false,
+    est: EstSpec? = null,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {}
 ) {
     val ctx = LocalContext.current
     var bmp by remember(shot.uri) { mutableStateOf<Bitmap?>(null) }
+    var estKb by remember(shot.uri) { mutableStateOf<Int?>(null) }
+    var estReady by remember(shot.uri) { mutableStateOf(false) }
     LaunchedEffect(shot.uri) { bmp = BatchEngine.loadThumb(ctx, shot.uri, 360) }
+    // 只算屏幕上真出现的那些，划走就取消；算过的结果在 BatchEngine 里有缓存
+    LaunchedEffect(shot.uri, est) {
+        val e = est ?: return@LaunchedEffect
+        estReady = false
+        estKb = BatchEngine.estimateKb(
+            ctx,
+            Picked(shot.uri, shot.name, e.w, e.h, shot.sizeKb),
+            e.preset,
+            e.plan
+        )
+        estReady = true
+    }
     Box(
         Modifier
             .fillMaxWidth()
@@ -310,13 +328,33 @@ fun ShotTile(
                 if (selected) Text("✓", color = Color.White, fontSize = 11.sp)
             }
         } else {
-            Text(
-                mb(shot.sizeKb),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
+            val e = est
+            if (e != null) {
+                TileBadge(
+                    if (!estReady) "算…"
+                    else estKb?.let {
+                        if (e.plan.targetKb > 0) "≤${mb(it)}" else "约 ${mb(it)}"
+                    } ?: "—",
+                    Modifier.align(Alignment.BottomStart).padding(4.dp)
+                )
+            }
+            TileBadge(
+                "原 ${mb(shot.sizeKb)}",
+                Modifier.align(Alignment.BottomEnd).padding(4.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun TileBadge(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(5.dp))
+            .background(Color.Black.copy(alpha = 0.56f))
+            .padding(horizontal = 5.dp, vertical = 1.dp)
+    ) {
+        Text(text, fontSize = 10.sp, color = Color.White, maxLines = 1)
     }
 }
 
