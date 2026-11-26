@@ -9,9 +9,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -118,7 +120,9 @@ fun GalleryScreen(
                         else "再点图片可以加减"
                     } else if (shots.isEmpty()) loc.label else "${loc.label} · 共 ${mb(totalKb)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             if (selecting) {
@@ -142,16 +146,40 @@ fun GalleryScreen(
                     }
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 三个文字按钮以前占掉近 300dp，标题被挤成两三行。
+                // 文字留着（换成图标反而要认），把内边距和字号收小，总宽压到 180dp 左右。
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val tight = Modifier.defaultMinSize(minWidth = 0.dp)
                     if (trashN > 0) {
-                        OutlinedButton(onClick = onOpenTrash) { Text("最近删除 $trashN") }
-                    }
-                    OutlinedButton(onClick = {
-                        if (!openGallery(ctx)) {
-                            toast(ctx, "没有能打开相册的应用")
+                        TextButton(
+                            onClick = onOpenTrash,
+                            modifier = tight,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("最近删除 $trashN", fontSize = 12.sp, maxLines = 1)
                         }
-                    }) { Text("相册") }
-                    OutlinedButton(onClick = { reload++ }) { Text("刷新") }
+                    }
+                    TextButton(
+                        onClick = {
+                            if (!openGallery(ctx)) {
+                                toast(ctx, "没有能打开相册的应用")
+                            }
+                        },
+                        modifier = tight,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("相册", fontSize = 12.sp, maxLines = 1)
+                    }
+                    TextButton(
+                        onClick = { reload++ },
+                        modifier = tight,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("刷新", fontSize = 12.sp, maxLines = 1)
+                    }
                 }
             }
         }

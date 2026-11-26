@@ -1,7 +1,7 @@
 {
-  "versionCode": 45,
-  "versionName": "1.13.1",
-  "notes": "桌面图标换成自己的样子了：紫色底、叠放的照片压一个向下箭头，跟软件主色一致，不再是系统默认的小机器人。顺手清了两处重复的字：转换页空态不再上下两行都写「还没选图」，成品页没有图时不再显示「共 0KB」。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.1/minimal-batch-v1.13.1-release.apk",
-  "size": 18834764
+  "versionCode": 46,
+  "versionName": "1.13.2",
+  "notes": "成品页右上那三个按钮（最近删除 / 相册 / 刷新）以前占掉近三分之一宽，有图的时候标题直接断成两行。这版把内边距和字号收小，整组压到原来的一半多，标题恢复一行；位置那行太长会末尾省略，不再折行。功能和按钮位置都没变。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.2/minimal-batch-v1.13.2-release.apk",
+  "size": 18834912
 }
