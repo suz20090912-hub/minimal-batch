@@ -116,7 +116,7 @@ fun GalleryScreen(
                     if (selecting) {
                         if (outside > 0) "另有 $outside 张在别的场景"
                         else "再点图片可以加减"
-                    } else "${loc.label} · 共 ${mb(totalKb)}",
+                    } else if (shots.isEmpty()) loc.label else "${loc.label} · 共 ${mb(totalKb)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

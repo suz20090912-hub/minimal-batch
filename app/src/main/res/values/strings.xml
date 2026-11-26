@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">极简批处理</string>
+    <color name="ic_launcher_bg">#6749B5</color>
 </resources>

@@ -623,7 +623,7 @@ fun ConvertScreen(
             if (st.picked.isEmpty()) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        if (st.importing) "正在导入，稍等…" else "还没选图。点「选择图片」开始",
+                        if (st.importing) "正在导入，稍等…" else "点「选择图片」开始挑图",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
