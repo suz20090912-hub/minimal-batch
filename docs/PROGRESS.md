@@ -1,6 +1,6 @@
 # 极简批处理 · 项目进度总览
 
-> 整理时间：2026-11-26　当前版本：**v1.7.3（versionCode 36）**
+> 整理时间：2026-11-26　当前版本：**v1.8.0（versionCode 37）**
 > 仓库：https://github.com/suz20090912-hub/minimal-batch　协议：MIT　交流群：1135338332
 
 ## 一、这是什么
@@ -35,6 +35,7 @@
 | v1.7.1 | 34 | 删掉设置里的「清空已选图片」，清空/移除统一到转换页 |
 | v1.7.2 | 35 | 「清除记录」点完整页回初始态（记录 + 选图一起清），成品不删 |
 | v1.7.3 | 36 | 按钮改回「清除记录」，点完直接空；删掉设置页「本次会话」卡片 |
+| v1.8.0 | 37 | 新增「导入文件夹」：整个目录（含子目录）一次进名单，追加不替换 |
 
 ## 三、已经定下来的设计（别再来回改）
 
@@ -86,6 +87,17 @@
 
 ---
 
+### v1.8.0：整个文件夹一次拿进来
+
+- 转换页「选择图片」旁边加「导入文件夹」，走 SAF 树选择器（`OpenDocumentTree`），`Session.importFolder` 接手。
+- 扫描逻辑在新文件 `FolderScan.kt`：直接用 `DocumentsContract` 批量查子项，一层一次 query，不引 `androidx.documentfile`。递归上限 6 层，`image/*` 优先，mime 缺失时按扩展名兜底（含 heic/heif/dng）。
+- 语义是追加：`旧 + 新` 去重写回 `K_SEL`，手选的几张不会被冲掉，可以叠多个文件夹。
+- 单次上限 2000 张；读取按 24 张一批喂给 `inspectAll`，避免几千张并发解码。
+- 新增 `importing` / `importMsg` 两个状态：扫描时显示"已找到 N 张"，读取时显示"x/y 张"，期间三个按钮禁用、网格位置显示"正在导入文件夹，稍等…"。
+- 按钮布局随之调整：`选择图片` / `导入文件夹` 并排一行，`开始处理` 单独整行（主操作更醒目）。
+
+---
+
 ### v1.7.3：名字说人话
 
 - 用户否掉了「清空重来」这个说法："清除记录就清除记录，清了直接没了就算了"。按钮改回「清除记录」，语义仍是整页恢复初始态（记录 + 选图一起清），只是不再另起名字。
@@ -117,9 +129,10 @@
 | v1.7.1 | 459027910 | 18,620,176 |
 | v1.7.2 | 459037014 | 18,620,396 |
 | v1.7.3 | 459046966 | 18,620,460 |
+| v1.8.0 | 459056845 | 18,637,372 |
 
-`update/version.json` 现为 36 / 1.7.3 / 18,620,460，APK 直链：
-`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.3/minimal-batch-v1.7.3-release.apk`
+`update/version.json` 现为 37 / 1.8.0 / 18,637,372，APK 直链：
+`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.0/minimal-batch-v1.8.0-release.apk`
 
 内置 6 条更新镜像：jsDelivr（`@main`，有 12h 级缓存）、ghproxy.net、gh-proxy.com、ghfast.top、GitHub raw、GitHub Raw 官方域名。
 
@@ -149,16 +162,16 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 ## 八、待办
 
-1. **真机验收** v1.7.3 重点：点「清除记录」是否直接回到"已选 0 张"的空态；成品页和系统相册里的图是否一张没少；长按「移出」是否照旧可用；设置页「本次会话」卡片是否已消失。
+1. **真机验收** v1.8.0 重点：选一个相机导出目录点「导入文件夹」，是否能扫到子目录里的图；扫描进度是否在动；导入完成后张数/体积对不对；先手动选两张再导文件夹，那两张是否还在。
 2. ~~目标大小压缩 + WebP~~（v1.7.0 已完成，等真机验收压缩是否真的进线）。
-3. **文件夹批量导入 + 断点续跑**（下一个能力点）。
+3. ~~文件夹批量导入~~（v1.8.0 已完成）；**断点续跑**是下一个能力点。
 4. **截图补齐**：01-main / 02-preview / 03-result / 04-gallery 四张实机图进 `screenshots/`。
 5. 再往后：回收站式删除、原图网格显示预计体积、英文界面 / F-Droid。
 
 ## 九、文件都在哪
 
-- 开发工程：`batch-app/`（1.7.3）
+- 开发工程：`batch-app/`（1.8.0）
 - 仓库镜像：`minimal-batch/`（与开发工程一致，含 CHANGELOG / README / update/version.json）
 - 交付的安装包：`极简批处理-v1.7.3-release.apk`（历史版本 1.2.2 → 1.7.2 也在同目录）
 - 签名：`release-key/minimal-batch.jks` + `release-key/说明.txt`
-- 云主机：`~/ktcheck/batch-app`（1.7.3 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
+- 云主机：`~/ktcheck/batch-app`（1.8.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
