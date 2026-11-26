@@ -1,7 +1,7 @@
 {
-  "versionCode": 33,
-  "versionName": "1.7.0",
-  "notes": "新增目标体积：不限 / ≤500KB / ≤2MB / 自定义，真压不是估——超线先逐档降质量，还超再缩尺寸，长边最低 640。另有 WebP 开关，同样画质体积更小（微信、部分图床不认）。文件名后缀跟着格式走。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.0/minimal-batch-v1.7.0-release.apk",
-  "size": 18620052
+  "versionCode": 34,
+  "versionName": "1.7.1",
+  "notes": "设置里那个「清空已选图片」去掉了——它实际在清转换页的记录，跟结果卡上的「清除记录」重复。现在动作分清楚：去掉某几张去转换页长按「移出」，整批不要点「清空已选」，只清记录点结果卡「清除记录」。设置那张卡只剩说明。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.1/minimal-batch-v1.7.1-release.apk",
+  "size": 18620176
 }
