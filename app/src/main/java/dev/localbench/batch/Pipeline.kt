@@ -36,6 +36,27 @@ enum class Preset(
     SOCIAL("社交方图", "方图", 1080, 85, true)
 }
 
+/**
+ * 输出约束：目标体积（KB，0 表示不限）和 WebP。
+ * 目标体积是真的压：先降质量，压不下去再缩尺寸，直到进线或者到底线为止。
+ */
+data class OutputPlan(
+    val targetKb: Int = 0,
+    val webp: Boolean = false
+) {
+    val mime: String get() = if (webp) "image/webp" else "image/jpeg"
+    val ext: String get() = if (webp) ".webp" else ".jpg"
+    val label: String
+        get() {
+            val size = when {
+                targetKb <= 0 -> "不限体积"
+                targetKb >= 1024 -> "≤%.1fMB".format(targetKb / 1024f)
+                else -> "≤${targetKb}KB"
+            }
+            return if (webp) "$size · WebP" else size
+        }
+}
+
 /** 选图后的预览信息（只读头部，不真解码）。 */
 data class Picked(
     val uri: Uri,
@@ -61,7 +82,8 @@ data class Done(
 data class Batch(
     val preset: Preset,
     val wallMs: Long,
-    val items: List<Done>
+    val items: List<Done>,
+    val plan: OutputPlan = OutputPlan()
 ) {
     val ok: List<Done> get() = items.filter { it.error == null }
     val srcTotalKb: Int get() = ok.sumOf { it.srcKb }
@@ -135,6 +157,7 @@ object BatchEngine {
         preset: Preset,
         lanes: Int,
         prefix: String,
+        plan: OutputPlan = OutputPlan(),
         onProgress: (done: Int, total: Int) -> Unit
     ): Batch = coroutineScope {
         val sem = Semaphore(lanes.coerceIn(1, 8))
@@ -144,7 +167,7 @@ object BatchEngine {
         val items = uris.mapIndexed { index, uri ->
             async(Dispatchers.IO) {
                 sem.withPermit {
-                    val item = process(ctx, uri, preset, prefix, index + 1)
+                    val item = process(ctx, uri, preset, prefix, index + 1, plan)
                     val n = done.incrementAndGet()
                     withContext(Dispatchers.Main) { onProgress(n, uris.size) }
                     item
@@ -152,7 +175,7 @@ object BatchEngine {
             }
         }.awaitAll()
 
-        Batch(preset, SystemClock.elapsedRealtime() - t0, items)
+        Batch(preset, SystemClock.elapsedRealtime() - t0, items, plan)
     }
 
     private fun process(
@@ -160,7 +183,8 @@ object BatchEngine {
         uri: Uri,
         preset: Preset,
         prefix: String,
-        seq: Int
+        seq: Int,
+        plan: OutputPlan
     ): Done {
         val name = displayName(ctx, uri)
         var srcW = 0
@@ -195,13 +219,13 @@ object BatchEngine {
             }
 
             val out = buildOutput(decoded, preset)
-            val data = encodeJpeg(out, preset.quality)
+            val data = compressToTarget(out, preset.quality, plan)
             val outW = out.width
             val outH = out.height
             if (out !== decoded) out.recycle()
 
-            val outName = buildName(name, preset, prefix, seq)
-            val saved = Store.save(ctx, preset, outName, data)
+            val outName = buildName(name, preset, prefix, seq, plan.ext)
+            val saved = Store.save(ctx, preset, outName, data, plan.mime)
             val ms = (System.nanoTime() - tStart) / 1_000_000L
 
             return if (saved.first != null) {
@@ -238,29 +262,75 @@ object BatchEngine {
         return cur
     }
 
-    private fun buildName(srcName: String, preset: Preset, prefix: String, seq: Int): String {
+    private fun buildName(srcName: String, preset: Preset, prefix: String, seq: Int, ext: String): String {
         val base = srcName.substringBeforeLast('.', srcName)
         return if (prefix.isBlank()) {
-            base + "_" + preset.tag + ".jpg"
+            base + "_" + preset.tag + ext
         } else {
-            prefix.trim() + "_" + seq.toString().padStart(3, '0') + ".jpg"
+            prefix.trim() + "_" + seq.toString().padStart(3, '0') + ext
         }
     }
 
     /** 编辑后的图另存，质量 92 */
-    fun encodeEdited(src: Bitmap, quality: Int = 92): ByteArray = encodeJpeg(src, quality)
+    fun encodeEdited(src: Bitmap, quality: Int = 92): ByteArray = encode(src, quality, false)
 
     /**
-     * PNG / WebP 带透明通道时先合到白底再编码。
-     * 否则 JPEG 不支持 alpha，透明区域会变成黑块。
+     * 真正压到目标体积：先逐档降质量，压不下去再缩尺寸（长边最低 640），
+     * 到底线还压不下来就返回最小那一版，不硬凑。
      */
-    private fun encodeJpeg(src: Bitmap, quality: Int): ByteArray {
-        val flat = if (src.hasAlpha()) flattenOnWhite(src) else src
+    private fun compressToTarget(src: Bitmap, quality: Int, plan: OutputPlan): ByteArray {
+        val limit = plan.targetKb.toLong() * 1024L
+        if (plan.targetKb <= 0) return encode(src, quality, plan.webp && canWebp())
+
+        var best = encode(src, quality, plan.webp && canWebp())
+        if (best.size.toLong() <= limit) return best
+
+        var q = quality
+        while (q > 40) {
+            q = max(40, q - 8)
+            best = encode(src, q, plan.webp && canWebp())
+            if (best.size.toLong() <= limit) return best
+        }
+
+        var cur = src
+        var mine = false
+        var scale = 0.85f
+        try {
+            repeat(4) {
+                val nw = max(1, (cur.width * scale).roundToInt())
+                val nh = max(1, (cur.height * scale).roundToInt())
+                if (max(nw, nh) < 640) return best
+                val scaled = Bitmap.createScaledBitmap(cur, nw, nh, true)
+                if (mine) cur.recycle()
+                cur = scaled
+                mine = true
+                val b = encode(cur, 40, plan.webp && canWebp())
+                if (b.size.toLong() <= limit) {
+                    best = b
+                    return best
+                }
+                scale *= 0.85f
+            }
+        } finally {
+            if (mine) cur.recycle()
+        }
+        return best
+    }
+
+    /** WebP 有损编码从 API 30 才有；低版本悄悄回落成 JPEG。 */
+    private fun canWebp(): Boolean = android.os.Build.VERSION.SDK_INT >= 30
+
+    private fun encode(src: Bitmap, quality: Int, webp: Boolean): ByteArray {
+        // WebP 支持透明通道；JPEG 要先合白底，否则透明区域变黑块
+        val flat = if (!webp && src.hasAlpha()) flattenOnWhite(src) else src
         val bos = ByteArrayOutputStream()
-        flat.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+        val fmt = if (webp) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.JPEG
+        flat.compress(fmt, quality.coerceIn(1, 100), bos)
         if (flat !== src) flat.recycle()
         return bos.toByteArray()
     }
+
+    private fun encodeJpeg(src: Bitmap, quality: Int): ByteArray = encode(src, quality, false)
 
     private fun flattenOnWhite(src: Bitmap): Bitmap {
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)

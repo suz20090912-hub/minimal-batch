@@ -124,27 +124,40 @@ object Store {
 
     // ---------------- 写入 / 删除 ----------------
 
-    fun save(ctx: Context, preset: Preset, fileName: String, data: ByteArray): Pair<Uri?, String?> {
-        return saveInto(ctx, preset.label, fileName, data)
+    fun save(
+        ctx: Context,
+        preset: Preset,
+        fileName: String,
+        data: ByteArray,
+        mime: String = "image/jpeg"
+    ): Pair<Uri?, String?> {
+        return saveInto(ctx, preset.label, fileName, data, mime)
     }
 
     /** 指定场景子目录写入，编辑后的新图也走这里 */
-    fun saveInto(ctx: Context, dir: String, fileName: String, data: ByteArray): Pair<Uri?, String?> {
+    fun saveInto(
+        ctx: Context,
+        dir: String,
+        fileName: String,
+        data: ByteArray,
+        mime: String = "image/jpeg"
+    ): Pair<Uri?, String?> {
         val t = tree(ctx)
-        return if (t != null) saveToTree(ctx, t, dir, fileName, data)
-        else saveToMedia(ctx, "${root(ctx)}/$dir", fileName, data)
+        return if (t != null) saveToTree(ctx, t, dir, fileName, data, mime)
+        else saveToMedia(ctx, "${root(ctx)}/$dir", fileName, data, mime)
     }
 
     private fun saveToMedia(
         ctx: Context,
         relDir: String,
         name: String,
-        data: ByteArray
+        data: ByteArray,
+        mime: String
     ): Pair<Uri?, String?> {
         return try {
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.MIME_TYPE, mime)
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$relDir")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
@@ -167,7 +180,8 @@ object Store {
         tree: Uri,
         dir: String,
         name: String,
-        data: ByteArray
+        data: ByteArray,
+        mime: String
     ): Pair<Uri?, String?> {
         val r = ctx.contentResolver
         return try {
@@ -183,7 +197,7 @@ object Store {
             val target = if (docId != null) {
                 docUri(tree, docId)
             } else {
-                DocumentsContract.createDocument(r, docUri(tree, dirId), "image/jpeg", name)
+                DocumentsContract.createDocument(r, docUri(tree, dirId), mime, name)
                     ?: return null to "文件创建失败"
             }
             val os = r.openOutputStream(target) ?: return null to "无法打开输出流"
@@ -194,7 +208,7 @@ object Store {
                 if (docId.startsWith("primary:")) {
                     val path = Environment.getExternalStorageDirectory().absolutePath +
                         "/" + docId.removePrefix("primary:")
-                    MediaScannerConnection.scanFile(ctx, arrayOf(path), arrayOf("image/jpeg"), null)
+                    MediaScannerConnection.scanFile(ctx, arrayOf(path), arrayOf(mime), null)
                 }
             }
             target to null
@@ -351,5 +365,6 @@ object Store {
         return null
     }
 }
+
 
 

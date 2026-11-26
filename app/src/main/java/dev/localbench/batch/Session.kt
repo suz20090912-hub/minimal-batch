@@ -28,6 +28,8 @@ object Session {
         val previewDone: Int = 0,
         val previewTotal: Int = 0,
         val preset: Preset = Preset.WECHAT,
+        val targetKb: Int = 0,
+        val webp: Boolean = false,
         val prefix: String = "",
         val running: Boolean = false,
         val doneCount: Int = 0,
@@ -39,6 +41,8 @@ object Session {
 
     private const val K_SEL = "selection"
     private const val K_PRESET = "preset"
+    private const val K_TARGET = "target_kb"
+    private const val K_WEBP = "webp"
 
     private val _state = MutableStateFlow(State())
     val state = _state.asStateFlow()
@@ -68,7 +72,12 @@ object Session {
         val p = prefs(context)
         val savedPreset = p.getString(K_PRESET, null)
             ?.let { runCatching { Preset.valueOf(it) }.getOrNull() } ?: Preset.WECHAT
-        _state.value = _state.value.copy(preset = savedPreset, restored = true)
+        _state.value = _state.value.copy(
+            preset = savedPreset,
+            targetKb = p.getInt(K_TARGET, 0),
+            webp = p.getBoolean(K_WEBP, false),
+            restored = true
+        )
 
         val saved = p.getStringSet(K_SEL, emptySet()).orEmpty()
             .mapNotNull { runCatching { Uri.parse(it) }.getOrNull() }
@@ -161,6 +170,19 @@ object Session {
         refreshPreviews(context)
     }
 
+    fun setTargetKb(context: Context, kb: Int) {
+        val v = kb.coerceIn(0, 10240)
+        bind(context)
+        prefs(context).edit().putInt(K_TARGET, v).apply()
+        _state.value = _state.value.copy(targetKb = v)
+    }
+
+    fun setWebp(context: Context, on: Boolean) {
+        bind(context)
+        prefs(context).edit().putBoolean(K_WEBP, on).apply()
+        _state.value = _state.value.copy(webp = on)
+    }
+
     fun setPrefix(value: String) {
         _state.value = _state.value.copy(prefix = value)
     }
@@ -199,7 +221,8 @@ object Session {
                 batch = null, notice = "", previewBusy = false
             )
             val b = BatchEngine.runBatch(
-                context, cur.picked.map { it.uri }, cur.preset, 3, _state.value.prefix
+                context, cur.picked.map { it.uri }, cur.preset, 3, _state.value.prefix,
+                OutputPlan(cur.targetKb, cur.webp)
             ) { d, t -> _state.value = _state.value.copy(doneCount = d, totalCount = t) }
             _state.value = _state.value.copy(running = false, batch = b)
         }
@@ -224,3 +247,4 @@ object Session {
         _state.value = _state.value.copy(running = false)
     }
 }
+

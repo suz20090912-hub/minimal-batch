@@ -4,6 +4,7 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -214,6 +215,8 @@ fun BatchApp() {
                         },
                         onPicked = { uris -> Session.setPicked(ctx, uris) },
                         onPreset = { p -> Session.setPreset(ctx, p) },
+                        onTarget = { kb -> Session.setTargetKb(ctx, kb) },
+                        onWebp = { on -> Session.setWebp(ctx, on) },
                         onPrefix = { Session.setPrefix(it) },
                         onStart = { Session.start(ctx) },
                         onClear = { Session.clearPicked(ctx) },
@@ -322,6 +325,8 @@ fun ConvertScreen(
     onNotice: () -> Unit,
     onPicked: (List<Uri>) -> Unit,
     onPreset: (Preset) -> Unit,
+    onTarget: (Int) -> Unit,
+    onWebp: (Boolean) -> Unit,
     onPrefix: (String) -> Unit,
     onStart: () -> Unit,
     onClear: () -> Unit,
@@ -334,6 +339,8 @@ fun ConvertScreen(
     // 长按一张进入"移出"模式：勾几张，点「移出」就只把这几张从这批里拿掉，原图不动
     var trimming by remember { mutableStateOf(false) }
     var trimSet by remember { mutableStateOf(emptySet<Uri>()) }
+    var customAsk by remember { mutableStateOf(false) }
+    var customText by remember { mutableStateOf("") }
 
     BackHandler(enabled = trimming) {
         trimming = false
@@ -410,6 +417,55 @@ fun ConvertScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        Spacer(Modifier.height(6.dp))
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(0 to "不限体积", 500 to "≤500KB", 2048 to "≤2MB").forEach { (kb, label) ->
+                FilterChip(
+                    selected = st.targetKb == kb,
+                    onClick = { onTarget(kb) },
+                    enabled = !st.running,
+                    label = { Text(label) }
+                )
+            }
+            val custom = st.targetKb != 0 && st.targetKb != 500 && st.targetKb != 2048
+            FilterChip(
+                selected = custom,
+                onClick = {
+                    customText = if (custom) st.targetKb.toString() else ""
+                    customAsk = true
+                },
+                enabled = !st.running,
+                label = { Text(if (custom) "≤${st.targetKb}KB" else "自定义") }
+            )
+            FilterChip(
+                selected = st.webp,
+                onClick = { onWebp(!st.webp) },
+                enabled = !st.running && Build.VERSION.SDK_INT >= 30,
+                label = { Text("WebP") }
+            )
+        }
+        if (st.targetKb > 0 || st.webp) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                buildString {
+                    if (st.targetKb > 0) {
+                        val s = if (st.targetKb >= 1024) "%.1fMB".format(st.targetKb / 1024f)
+                        else "${st.targetKb}KB"
+                        append("超过 $s 就先降质量，还超就缩尺寸")
+                    }
+                    if (st.webp) {
+                        if (isNotEmpty()) append("　·　")
+                        append("WebP 更小，个别平台不认")
+                    }
+                },
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Spacer(Modifier.height(10.dp))
         val pickSrc = remember { MutableInteractionSource() }
@@ -543,6 +599,40 @@ fun ConvertScreen(
             }
         }
     }
+
+    if (customAsk) {
+        AlertDialog(
+            onDismissRequest = { customAsk = false },
+            title = { Text("压到多大？") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = customText,
+                        onValueChange = { customText = it.filter { c -> c.isDigit() }.take(5) },
+                        singleLine = true,
+                        label = { Text("多少 KB 以内（例：800）") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "压不到就先降质量、再缩尺寸，长边最低 640，不会无限缩。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val kb = customText.toIntOrNull()
+                    if (kb != null) onTarget(kb.coerceIn(50, 10240))
+                    customAsk = false
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { customAsk = false }) { Text("取消") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -576,6 +666,13 @@ fun ResultCard(batch: Batch, notice: String, onDismiss: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text("${batch.preset.label} · 完成", style = MaterialTheme.typography.titleMedium)
+            if (batch.plan.targetKb > 0 || batch.plan.webp) {
+                Text(
+                    batch.plan.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(Modifier.height(6.dp))
             Text(
                 "成功 ${batch.ok.size}/${batch.items.size} · 用时 %.1fs".format(batch.wallMs / 1000.0),
