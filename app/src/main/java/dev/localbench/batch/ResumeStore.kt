@@ -12,9 +12,10 @@ import java.io.File
  * 文件格式（纯文本，第一行是表头，之后每行是一条已完成记录）：
  *
  *   {"uris":[...],"preset":"...","targetKb":0,"webp":false,"prefix":"","total":N}
- *   {"i":0,"name":"a.jpg","srcKb":..,"outKb":..,"outW":..,"outH":..,"ms":..,"out":"content://.."}
+ *   {"u":"content://....","name":"a.jpg","srcKb":..,"outKb":..,"outW":..,"outH":..,"ms":..,"out":"content://.."}
  *
- * 用追加写，每处理完一张就补一行，进程被系统杀掉最多丢最后一张。
+ * 已完成项按"图片地址"记，不按序号——清单顺序一变（冷启动恢复、重新排序），
+ * 按序号记就会跳错图，按地址记永远不会。
  */
 object ResumeStore {
 
@@ -48,11 +49,11 @@ object ResumeStore {
         }
     }
 
-    fun append(ctx: Context, index: Int, d: Done) {
+    fun append(ctx: Context, uri: Uri, d: Done) {
         synchronized(lock) {
             runCatching {
                 val o = JSONObject()
-                o.put("i", index)
+                o.put("u", uri.toString())
                 o.put("name", d.name)
                 o.put("srcKb", d.srcKb)
                 o.put("outKb", d.outKb)
@@ -68,8 +69,9 @@ object ResumeStore {
 
     /**
      * 读回上次没跑完的那批。文件不存在、表头坏了、或者已经全做完，都返回 null。
+     * 第二个返回值以「图片地址」为键。
      */
-    fun load(ctx: Context): Pair<Header, Map<Int, Done>>? {
+    fun load(ctx: Context): Pair<Header, Map<String, Done>>? {
         val f = file(ctx)
         if (!f.exists()) return null
         return runCatching {
@@ -92,14 +94,14 @@ object ResumeStore {
                 webp = head.optBoolean("webp", false),
                 prefix = head.optString("prefix", "")
             )
-            val doneMap = LinkedHashMap<Int, Done>()
+            val doneMap = LinkedHashMap<String, Done>()
             lines.drop(1).forEach { line ->
                 if (line.isBlank()) return@forEach
                 val o = runCatching { JSONObject(line) }.getOrNull() ?: return@forEach
-                val i = o.optInt("i", -1)
-                if (i < 0) return@forEach
+                val key = o.optString("u", "")
+                if (key.isEmpty()) return@forEach
                 val out = o.optString("out", "")
-                doneMap[i] = Done(
+                doneMap[key] = Done(
                     name = o.optString("name", ""),
                     srcKb = o.optInt("srcKb", 0),
                     outKb = o.optInt("outKb", 0),
@@ -110,7 +112,8 @@ object ResumeStore {
                     error = o.optString("err", "").ifEmpty { null }
                 )
             }
-            if (doneMap.size >= uris.size) return null
+            // 全都做完了，这份断点没有意义
+            if (uris.all { it.toString() in doneMap }) return null
             header to doneMap
         }.getOrNull()
     }

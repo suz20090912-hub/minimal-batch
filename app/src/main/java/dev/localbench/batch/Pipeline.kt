@@ -158,32 +158,36 @@ object BatchEngine {
         lanes: Int,
         prefix: String,
         plan: OutputPlan = OutputPlan(),
-        /** 上次已经做完的那些（索引 → 结果），这些不再重复处理。 */
-        resume: Map<Int, Done> = emptyMap(),
+        /** 上次已经做完的那些（以图片地址为键），这些不再重复处理。 */
+        resume: Map<String, Done> = emptyMap(),
         /** 每做完一张回调一次，用于写断点文件。 */
-        onItem: (index: Int, done: Done) -> Unit = { _, _ -> },
+        onItem: (uri: Uri, done: Done) -> Unit = { _, _ -> },
         onProgress: (done: Int, total: Int) -> Unit
     ): Batch = coroutineScope {
         val sem = Semaphore(lanes.coerceIn(1, 8))
-        val done = AtomicInteger(resume.size)
+        val keys = uris.map { it.toString() }
+        val finished = AtomicInteger(keys.count { it in resume })
         val t0 = SystemClock.elapsedRealtime()
         val total = uris.size
-        withContext(Dispatchers.Main) { onProgress(resume.size, total) }
+        withContext(Dispatchers.Main) { onProgress(finished.get(), total) }
 
         val fresh = uris.mapIndexedNotNull { index, uri ->
-            if (index in resume) null
+            val key = uri.toString()
+            if (key in resume) null
             else async(Dispatchers.IO) {
                 sem.withPermit {
                     val item = process(ctx, uri, preset, prefix, index + 1, plan)
-                    runCatching { onItem(index, item) }
-                    val n = done.incrementAndGet()
+                    runCatching { onItem(uri, item) }
+                    val n = finished.incrementAndGet()
                     withContext(Dispatchers.Main) { onProgress(n, total) }
-                    index to item
+                    key to item
                 }
             }
         }.awaitAll()
 
-        val all = (resume.toList() + fresh).sortedBy { it.first }.map { it.second }
+        val freshMap = fresh.toMap()
+        // 按当前清单顺序拼回去，上次做完的插在原来的位置
+        val all = uris.mapNotNull { uri -> resume[uri.toString()] ?: freshMap[uri.toString()] }
         Batch(preset, SystemClock.elapsedRealtime() - t0, all, plan)
     }
 
