@@ -1,7 +1,7 @@
 {
-  "versionCode": 42,
-  "versionName": "1.11.0",
-  "notes": "选图网格每张标出处理后大概多大：左下角「约 320KB」，右下角「原 1.2MB」，一眼看对比。设了目标体积就直接标「≤1.2MB」，不再给估算。换场景 / 改体积 / 开 WebP 会重算，只算屏幕上出现的那几张，划走取消、算过的记住。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.11.0/minimal-batch-v1.11.0-release.apk",
-  "size": 18721016
+  "versionCode": 43,
+  "versionName": "1.12.0",
+  "notes": "成品页「全选」改成按当前位置的全部成品算，停在哪个场景都行，不用先切「全部」。按钮写「全选 40」，点前就知道几张；点完视图自动切到「全部」；选中跨了场景会提示有几张在别的场景里，删除确认框列出各场景分布。跨场景删完自动切回全部。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.12.0/minimal-batch-v1.12.0-release.apk",
+  "size": 18721232
 }
