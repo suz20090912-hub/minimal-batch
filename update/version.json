@@ -1,7 +1,7 @@
 {
-  "versionCode": 34,
-  "versionName": "1.7.1",
-  "notes": "设置里那个「清空已选图片」去掉了——它实际在清转换页的记录，跟结果卡上的「清除记录」重复。现在动作分清楚：去掉某几张去转换页长按「移出」，整批不要点「清空已选」，只清记录点结果卡「清除记录」。设置那张卡只剩说明。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.1/minimal-batch-v1.7.1-release.apk",
-  "size": 18620176
+  "versionCode": 35,
+  "versionName": "1.7.2",
+  "notes": "原来点「清除记录」只清记录、又把选图退回去，看着像没清干净。现在改名「清空重来」：一点就回到刚打开的样子，记录没了、选好的图也清空。成品一张不删，还在成品页和系统相册里。只想去掉几张不转的，仍然用转换页长按「移出」。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.7.2/minimal-batch-v1.7.2-release.apk",
+  "size": 18620396
 }
