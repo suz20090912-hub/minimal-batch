@@ -6,7 +6,8 @@
 
 | 版本 | 日期 | 一句话 | 修复 | 新增 | 状态 |
 |---|---|---|---|---|---|
-| [v1.8.0](#v180--2026-11-26) | 2026-11-26 | 新增「导入文件夹」：整个目录（含子目录）一次进名单，追加不替换 | 3 | 2 | 最新，推荐 |
+| [v1.8.1](#v181--2026-11-26) | 2026-11-26 | 修「导入文件夹」选完目录必闪退：后台线程弹 Toast | 1 | 1 | 最新，推荐 |
+| [v1.8.0](#v180--2026-11-26) | 2026-11-26 | 新增「导入文件夹」：整个目录（含子目录）一次进名单，追加不替换 | 3 | 2 | 已被 v1.8.1 取代 |
 | [v1.7.3](#v173--2026-11-26) | 2026-11-26 | 按钮改回「清除记录」，点完直接空；删掉设置页「本次会话」卡片 | 2 | 1 | 已被 v1.8.0 取代 |
 | [v1.7.2](#v172--2026-11-26) | 2026-11-26 | 「清除记录」改「清空重来」，点了整页回到初始态，成品不删 | 1 | 1 | 已被 v1.7.3 取代 |
 | [v1.7.1](#v171--2026-11-26) | 2026-11-26 | 设置里的「清空已选图片」删掉，清空/移除统一放转换页 | 1 | 0 | 已被 v1.7.2 取代 |
@@ -38,6 +39,34 @@
 安装包在 [Releases](../../releases)。
 
 ---
+## v1.8.1 — 2026-11-26
+
+**主题**：一个必崩的后台线程野路子。
+
+### 你反馈的
+
+- 点「导入文件夹」、选中目录、点确定之后必定闪退回桌面。
+
+### 原因
+
+- `Session.importFolder` 跑在 `Dispatchers.IO`（`SupervisorJob + IO`，没有 `CoroutineExceptionHandler`）。
+- 收尾那句提示直接在那个线程调 `Toast.makeText(...).show()`；Android 11+ 起在无 Looper 的线程弹 Toast 会抛 `RuntimeException`，协程里没人接，直接传到默认未捕获处理器，进程死。
+- 不管扫到图（"从文件夹加入 N 张"）还是没扫到（"没找到图片"），收尾都要弹一次，所以必定崩。
+
+### 改法
+
+- `Ui.kt` 的 `toast()` 改成线程安全：已在主线程就直接弹，不在就 `Handler(Looper.getMainLooper()).post`；统一用 `applicationContext`，Activity 已退出也不会 BadToken。
+- `Session.importFolder` 整段包 `try/catch/finally`：异常只 toast「导入失败：…」，`finally` 一定复位 `importing`。
+- `FolderScan.collect` 里 `walk()` 也包 `runCatching`，某个 provider 的坏节点不会让已扫到的图全丢。
+- 新增 `Crashes.kt`：挂一层 `Thread.setDefaultUncaughtExceptionHandler`，崩溃堆栈写 `filesDir/last_crash.txt`，记录完照旧交回系统。设置「关于」里崩过才出现「上次崩溃日志（点击复制）」。
+
+### 教训
+
+- 以后凡是后台协程里要给用户看一句话，一律走 `toast()`，不许直接 `Toast.makeText`。
+- `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 不配 handler，异常等于必崩，涉及外部 provider 的逻辑要自己兜。
+
+---
+
 ## v1.8.0 — 2026-11-26
 
 **主题**：不再一张张点。
