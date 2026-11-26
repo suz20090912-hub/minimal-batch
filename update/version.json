@@ -1,7 +1,7 @@
 {
-  "versionCode": 37,
-  "versionName": "1.8.0",
-  "notes": "转换页多了「导入文件夹」：相机导出目录、网盘下载目录，选一下整个文件夹就进来了，子文件夹一起扫，HEIC 也认。往里加不是替换，已经挑好的几张会留着、重复的自动跳过。一次最多 2000 张，扫的时候有进度。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.0/minimal-batch-v1.8.0-release.apk",
-  "size": 18637372
+  "versionCode": 38,
+  "versionName": "1.8.1",
+  "notes": "修一个必崩的 bug：上一版点「导入文件夹」、选完目录点确定会直接闪退回桌面。原因是在后台线程弹 Toast，Android 11 之后这条路必抛异常。现在 toast 改成线程安全的，导入流程整段兜住异常，失败只会提示原因。另外新增崩溃记录，真崩了能在设置「关于」里一键复制堆栈。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.1/minimal-batch-v1.8.1-release.apk",
+  "size": 18637980
 }

@@ -1,6 +1,6 @@
 # 极简批处理 · 项目进度总览
 
-> 整理时间：2026-11-26　当前版本：**v1.8.0（versionCode 37）**
+> 整理时间：2026-11-26　当前版本：**v1.8.1（versionCode 38）**
 > 仓库：https://github.com/suz20090912-hub/minimal-batch　协议：MIT　交流群：1135338332
 
 ## 一、这是什么
@@ -36,6 +36,7 @@
 | v1.7.2 | 35 | 「清除记录」点完整页回初始态（记录 + 选图一起清），成品不删 |
 | v1.7.3 | 36 | 按钮改回「清除记录」，点完直接空；删掉设置页「本次会话」卡片 |
 | v1.8.0 | 37 | 新增「导入文件夹」：整个目录（含子目录）一次进名单，追加不替换 |
+| v1.8.1 | 38 | 修「导入文件夹」选完目录必闪退：后台线程弹 Toast；补齐崩溃日志 |
 
 ## 三、已经定下来的设计（别再来回改）
 
@@ -87,6 +88,15 @@
 
 ---
 
+### v1.8.1：后台线程弹 Toast 必崩
+
+- 现象：v1.8.0 点「导入文件夹」→ 选目录 → 确定 → 必定闪退回桌面。
+- 原因：`importFolder` 跑在 `Dispatchers.IO`，收尾的 `Toast.makeText(...).show()` 在无 Looper 线程执行，Android 11+ 直接抛 `RuntimeException`；`SupervisorJob` 没配 `CoroutineExceptionHandler`，异常直冲默认处理器，进程死。成功和空文件夹两条路都要弹一次，所以必崩。
+- 改法：`Ui.kt` 的 `toast()` 线程安全（非主线程转投 `Handler(Looper.getMainLooper())`），并统一 `applicationContext`；`importFolder` 整段 `try/catch/finally`；`FolderScan.collect` 对 `walk` 兜一层 `runCatching`。
+- 新增 `Crashes.kt`：`Thread.setDefaultUncaughtExceptionHandler` 记录堆栈到 `filesDir/last_crash.txt`（写版本号与线程名），设置「关于」里崩过才出现「上次崩溃日志（点击复制）」。
+
+---
+
 ### v1.8.0：整个文件夹一次拿进来
 
 - 转换页「选择图片」旁边加「导入文件夹」，走 SAF 树选择器（`OpenDocumentTree`），`Session.importFolder` 接手。
@@ -130,9 +140,10 @@
 | v1.7.2 | 459037014 | 18,620,396 |
 | v1.7.3 | 459046966 | 18,620,460 |
 | v1.8.0 | 459056845 | 18,637,372 |
+| v1.8.1 | 459066139 | 18,637,980 |
 
-`update/version.json` 现为 37 / 1.8.0 / 18,637,372，APK 直链：
-`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.0/minimal-batch-v1.8.0-release.apk`
+`update/version.json` 现为 38 / 1.8.1 / 18,637,980，APK 直链：
+`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.8.1/minimal-batch-v1.8.1-release.apk`
 
 内置 6 条更新镜像：jsDelivr（`@main`，有 12h 级缓存）、ghproxy.net、gh-proxy.com、ghfast.top、GitHub raw、GitHub Raw 官方域名。
 
@@ -170,8 +181,8 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 ## 九、文件都在哪
 
-- 开发工程：`batch-app/`（1.8.0）
+- 开发工程：`batch-app/`（1.8.1）
 - 仓库镜像：`minimal-batch/`（与开发工程一致，含 CHANGELOG / README / update/version.json）
 - 交付的安装包：`极简批处理-v1.7.3-release.apk`（历史版本 1.2.2 → 1.7.2 也在同目录）
 - 签名：`release-key/minimal-batch.jks` + `release-key/说明.txt`
-- 云主机：`~/ktcheck/batch-app`（1.8.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
+- 云主机：`~/ktcheck/batch-app`（1.8.1 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
