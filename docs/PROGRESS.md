@@ -222,9 +222,10 @@
 | v1.10.0 | 459104700 | 18,720,700 |
 | v1.11.0 | 459128957 | 18,721,016 |
 | v1.12.0 | 459136210 | 18,721,232 |
+| v1.13.0 | 459165675 | 18,737,992 |
 
-`update/version.json` 现为 43 / 1.12.0 / 18,721,232，APK 直链：
-`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.12.0/minimal-batch-v1.12.0-release.apk`
+`update/version.json` 现为 44 / 1.13.0 / 18,737,992，APK 直链：
+`https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.0/minimal-batch-v1.13.0-release.apk`
 
 内置 6 条更新镜像：jsDelivr（`@main`，有 12h 级缓存）、ghproxy.net、gh-proxy.com、ghfast.top、GitHub raw、GitHub Raw 官方域名。
 

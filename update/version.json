@@ -1,7 +1,7 @@
 {
-  "versionCode": 43,
-  "versionName": "1.12.0",
-  "notes": "成品页「全选」改成按当前位置的全部成品算，停在哪个场景都行，不用先切「全部」。按钮写「全选 40」，点前就知道几张；点完视图自动切到「全部」；选中跨了场景会提示有几张在别的场景里，删除确认框列出各场景分布。跨场景删完自动切回全部。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.12.0/minimal-batch-v1.12.0-release.apk",
-  "size": 18721232
+  "versionCode": 44,
+  "versionName": "1.13.0",
+  "notes": "换白色 / 黑色时整套颜色缓过来了，不再一下跳过去；两套配色补全到卡片、弹层、底栏，深色下不再发灰。圆角和标题字重调过一遍，布局没动。全 App 文案重写成短句，去掉那些绕口的说明。顺手修了三个平时测不出来的问题：点「停下」其实没停住、停止状态被进度盖回去、处理中断后一直卡在「处理中」。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.0/minimal-batch-v1.13.0-release.apk",
+  "size": 18737992
 }
