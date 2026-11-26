@@ -55,7 +55,7 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
             Store.setTree(ctx, uri)
             custom = true
             onChanged()
-            toast(ctx, "输出位置已改为自定义文件夹")
+            toast(ctx, "已改到自定义文件夹")
         }
     }
 
@@ -80,7 +80,7 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Text("外观", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "白色 / 黑色 / 跟着系统变。改完立刻生效，不用重启。",
+                    "白色、黑色，或者跟系统走。改完立刻生效",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -144,8 +144,8 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "默认放在 Pictures 下，系统相册直接可见。选到别的位置后会尽量通知一次系统相册刷新；" +
-                        "万一相册里还是找不到，就到「成品」页看，那里能按位置切回来。换位置只影响以后的处理，老图不动。",
+                    "默认放在 Pictures，系统相册能直接看到。换到别处只影响以后处理的图，老图不动；" +
+                        "相册里找不到就到「成品」页看。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -160,7 +160,7 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Text("检查更新", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "只有你自己点的时候才联网。里面可以选镜像站、测速、配代理。",
+                    "只在你点的时候联网。可以选镜像站、测速、配代理。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -181,8 +181,7 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Text("QQ 群：1135338332", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "想交流、聊天，或者遇到 bug、有功能建议，都可以加这个群。" +
-                        "不用只聊软件和图片，平常聊天也欢迎；群里不卖课、不推广。",
+                    "遇到 bug、有建议，或者只是想聊天，都可以加。群里不卖课、不推广。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -201,7 +200,7 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Text("更新日志", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "每一版改了什么、修了哪些问题，打包在安装包里，离线可看。",
+                    "每版改了什么、修了什么，都在安装包里，离线能看。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -217,16 +216,16 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 Spacer(Modifier.height(6.dp))
                 InfoRow("版本", "v$version")
                 InfoRow("协议", "MIT")
-                InfoRow("权限", "联网仅用于手动检查更新")
+                InfoRow("权限", "只有手动检查更新时联网")
                 InfoRow("费用", "完全免费 · 不设赞助")
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "本项目完全开源免费，不设置任何赞助渠道，也没有付费版。能帮到你就好。",
+                    "完全开源免费，没有赞助渠道，也没有付费版。",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "全部处理在本机完成，图片不上传。检查更新只有你手动点的时候才联网。",
+                    "图片只在本机处理，不上传。只有你点「获取更新」时才联网。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -245,8 +244,8 @@ fun SettingsScreen(onOpenLog: () -> Unit, onChanged: () -> Unit, onOpenUpdate: (
                 val crash = remember { Crashes.read(ctx) }
                 if (crash.isNotBlank()) {
                     TextButton(onClick = {
-                        copyText(ctx, crash, "崩溃日志已复制，可以发给开发者")
-                    }) { Text("上次崩溃日志（点击复制）") }
+                        copyText(ctx, crash, "崩溃日志已复制，可以贴到群里")
+                    }) { Text("上次崩溃日志") }
                 }
             }
         }
@@ -270,7 +269,7 @@ fun ChangelogScreen(onClose: () -> Unit) {
     val text = remember {
         runCatching {
             ctx.assets.open("update-log.md").bufferedReader().use { it.readText() }
-        }.getOrDefault("更新日志未打包进安装包。")
+        }.getOrDefault("更新日志没打进安装包。")
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(

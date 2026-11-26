@@ -31,7 +31,7 @@ object NoticeStore {
     private const val KEY = "notice_seen"
 
     /** 公告编号：改大这个数，所有人都会重新看到右上角的小圆点 */
-    const val ID = 19
+    const val ID = 20
 
     fun seen(ctx: Context): Boolean =
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getInt(KEY, 0) >= ID
@@ -48,7 +48,7 @@ object NoticeStore {
     fun read(ctx: Context): String = runCatching {
         ctx.assets.open("notice.md").bufferedReader().use { it.readText() }
             .replace("{version}", versionName(ctx))
-    }.getOrDefault("公告没打包进安装包。")
+    }.getOrDefault("公告没打进安装包。")
 }
 
 @Composable

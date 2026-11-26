@@ -101,8 +101,7 @@ fun TrashScreen(onClose: () -> Unit, onChanged: () -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text("最近删除", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (items.isEmpty()) "没有可还原的图"
-                        else "共 ${items.size} 张 · ${mb(totalKb)} · 保留 ${Trash.KEEP_DAYS} 天",
+                        if (items.isEmpty()) "空着" else "共 ${items.size} 张 · ${mb(totalKb)} · 留 ${Trash.KEEP_DAYS} 天",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -125,7 +124,7 @@ fun TrashScreen(onClose: () -> Unit, onChanged: () -> Unit) {
                         Text("这里空着", style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "在成品页或看图页删掉的图会先来这里，\n${Trash.KEEP_DAYS} 天内都能还原。",
+                            "成品页删掉的图会先到这，\n${Trash.KEEP_DAYS} 天内能还原。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -151,7 +150,7 @@ fun TrashScreen(onClose: () -> Unit, onChanged: () -> Unit) {
         AlertDialog(
             onDismissRequest = { actionFor = null },
             title = { Text(target.name, maxLines = 1) },
-            text = { Text("还原回「${target.scene}」，或者彻底删掉。彻底删掉就找不回来了。") },
+            text = { Text("还原到「${target.scene}」。彻底删除后找不回来。") },
             confirmButton = {
                 TextButton(onClick = {
                     actionFor = null
@@ -185,7 +184,7 @@ fun TrashScreen(onClose: () -> Unit, onChanged: () -> Unit) {
         AlertDialog(
             onDismissRequest = { askPurgeAll = false },
             title = { Text("清空最近删除？") },
-            text = { Text("这 ${items.size} 张会彻底删掉，进不来了。") },
+            text = { Text("这 ${items.size} 张会彻底删掉，找不回来。") },
             confirmButton = {
                 TextButton(onClick = {
                     askPurgeAll = false

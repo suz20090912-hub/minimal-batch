@@ -442,7 +442,7 @@ fun ImageViewer(
             AlertDialog(
                 onDismissRequest = { askDelete = false },
                 title = { Text("删除这张？") },
-                text = { Text("「${s.name}」会进「最近删除」，${Trash.KEEP_DAYS} 天内能还原；系统相册里立刻消失，原图不动。") },
+                text = { Text("会进「最近删除」，${Trash.KEEP_DAYS} 天内能还原。相册里立刻消失，原图不动。") },
                 confirmButton = {
                     TextButton(onClick = {
                         askDelete = false
@@ -460,7 +460,7 @@ fun ImageViewer(
                             if (items.isEmpty()) {
                                 onDismiss()
                             } else {
-                                toast(ctx, "已移入最近删除，${Trash.KEEP_DAYS} 天内可还原")
+                                toast(ctx, "已放进最近删除，${Trash.KEEP_DAYS} 天内能还原")
                                 pager.scrollToPage(idx.coerceIn(0, items.size - 1))
                             }
                         }

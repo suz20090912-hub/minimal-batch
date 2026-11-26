@@ -267,7 +267,7 @@ fun UpdateScreen(onClose: () -> Unit) {
                 ) { Text(if (busy) "检查中…" else "获取更新") }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "只有点这个按钮才会联网，平时不做任何检查。会先连镜像站，再读版本信息。",
+                    "只在你点的时候联网。先连镜像站，再读版本信息。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -383,8 +383,8 @@ fun UpdateScreen(onClose: () -> Unit) {
                 Text("镜像站", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "更新信息放在 GitHub 上，国内直连不一定通。这里内置几条加速线路，" +
-                        "自动=逐个测速挑最快的，手动=只用你选的那条。",
+                    "版本信息放在 GitHub，国内直连经常不通。这里内置几条加速线路：" +
+                        "自动逐个测速挑最快，手动只用你选的。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -454,7 +454,7 @@ fun UpdateScreen(onClose: () -> Unit) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "填了就会多出一条「自定义镜像」，地址要指向 version.json 本体。",
+                    "填了就多一条「自定义镜像」，地址指向 version.json。",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -528,8 +528,8 @@ fun UpdateScreen(onClose: () -> Unit) {
             title = { Text("获取最新版本？") },
             text = {
                 Text(
-                    "接下来会联网：先连镜像站，再读版本信息，有新版才会下载。\n" +
-                        "不会自己装，也不会后台上传任何东西。"
+                    "接下来会联网：连镜像站、读版本信息，有新版才下载。\n" +
+                        "不会自动安装，也不会后台上传。"
                 )
             },
             confirmButton = {

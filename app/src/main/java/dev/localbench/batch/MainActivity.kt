@@ -112,7 +112,11 @@ class MainActivity : ComponentActivity() {
             val systemDark = isSystemInDarkTheme()
             val dark = mode.resolveDark(systemDark)
             val view = androidx.compose.ui.platform.LocalView.current
+            // 冷启动第一次要立刻对齐，否则状态栏图标会停在系统默认色上；之后切换再等动画
+            var firstTheme by remember { mutableStateOf(true) }
             LaunchedEffect(dark) {
+                if (!firstTheme) kotlinx.coroutines.delay(THEME_FADE_MS)
+                firstTheme = false
                 window.setBackgroundDrawable(
                     ColorDrawable(if (dark) WINDOW_DARK else WINDOW_LIGHT)
                 )
@@ -158,7 +162,7 @@ fun BatchApp() {
     LaunchedEffect(st.batch) {
         if (st.batch != null) {
             galleryKey++
-            toast(ctx, "转换完成，请到成品页查看")
+            toast(ctx, "这批做完了，成品页能看")
         }
     }
 
@@ -170,7 +174,7 @@ fun BatchApp() {
             updateOpen -> updateOpen = false
             noticeOpen -> noticeOpen = false
             logOpen -> logOpen = false
-            st.running && tab == 0 -> toast(ctx, "正在处理 ${st.doneCount}/${st.totalCount} 张，先别退")
+            st.running && tab == 0 -> toast(ctx, "还在处理 ${st.doneCount}/${st.totalCount}，退了就停")
             tab != 0 -> tab = 0
             else -> exitAsk = true
         }
@@ -321,13 +325,13 @@ fun ExitDialog(st: Session.State, onCancel: () -> Unit) {
     val ctx = LocalContext.current
     AlertDialog(
         onDismissRequest = onCancel,
-        title = { Text("确定退出？") },
+        title = { Text("退出应用？") },
         text = {
             Text(
                 when {
-                    st.running -> "正在处理 ${st.doneCount}/${st.totalCount} 张，退出会中断这一批。"
-                    st.picked.isNotEmpty() -> "已选 ${st.picked.size} 张图。退出后下次打开会自动恢复这些选择，但当前这轮的进度会丢。"
-                    else -> "退出后下次打开还是回到这里，输出位置和设置都会保留。"
+                    st.running -> "还有 ${st.totalCount - st.doneCount} 张没跑完，退出就停了。"
+                    st.picked.isNotEmpty() -> "选好的 ${st.picked.size} 张会留着，下次打开还在。"
+                    else -> "下次打开还是这里，设置都在。"
                 }
             )
         },
@@ -394,7 +398,7 @@ fun ConvertScreen(
             Column(Modifier.weight(1f)) {
                 Text("极简批处理", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "原图只读，新图写进 ${Store.where(ctx)}",
+                    "原图不动，成品写到 ${Store.where(ctx)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -440,7 +444,7 @@ fun ConvertScreen(
         Text(
             when (st.preset) {
                 Preset.WECHAT -> "长边 1920 · JPEG q82 · 发微信不糊"
-                Preset.ARCHIVE -> "保持原尺寸 · JPEG q90 · 只把 HEIC 换成 JPG"
+                Preset.ARCHIVE -> "原尺寸 · JPEG q90 · 不缩图"
                 Preset.SOCIAL -> "中心裁方 1080 · q85 · 头像/种草图"
             },
             style = MaterialTheme.typography.bodySmall,
@@ -484,11 +488,11 @@ fun ConvertScreen(
                     if (st.targetKb > 0) {
                         val s = if (st.targetKb >= 1024) "%.1fMB".format(st.targetKb / 1024f)
                         else "${st.targetKb}KB"
-                        append("超过 $s 就先降质量，还超就缩尺寸")
+                        append("压不到 $s 就先降质量，再缩尺寸")
                     }
                     if (st.webp) {
                         if (isNotEmpty()) append("　·　")
-                        append("WebP 更小，个别平台不认")
+                        append("体积更小，部分平台不认")
                     }
                 },
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
@@ -533,8 +537,7 @@ fun ConvertScreen(
         if (st.resumeTotal > 0 && !st.running && st.batch == null && !st.importing) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "上一批没跑完：已完成 ${st.resumeDone}/${st.resumeTotal} 张，" +
-                    "点「开始处理」会跳过做完的那 ${st.resumeDone} 张接着跑",
+                "上一批还剩 ${st.resumeTotal - st.resumeDone} 张没跑，点「开始处理」接着跑",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.primary
             )
@@ -560,7 +563,7 @@ fun ConvertScreen(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                "处理中 ${st.doneCount} / ${st.totalCount}　可以切到别的页，不会中断",
+                "处理中 ${st.doneCount}/${st.totalCount}，切到别的页不中断",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -589,9 +592,9 @@ fun ConvertScreen(
                 Text(
                     when {
                         st.importing -> st.importMsg.ifBlank { "正在导入…" }
-                        trimming -> "已勾 ${trimSet.size} 张，点「移出」就不参与这批"
-                        st.picked.isEmpty() -> "还没选图　点上面的「选择图片」开始"
-                        else -> "已选 ${st.picked.size} 张 · 共 ${mb(st.picked.sumOf { it.sizeKb })}　点一下放大，长按移出"
+                        trimming -> "已勾 ${trimSet.size} 张，点「移出」从这批拿掉"
+                        st.picked.isEmpty() -> "还没选图"
+                        else -> "已选 ${st.picked.size} 张 · ${mb(st.picked.sumOf { it.sizeKb })}。点开看大图，长按移出"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -620,7 +623,7 @@ fun ConvertScreen(
             if (st.picked.isEmpty()) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        if (st.importing) "正在导入文件夹，稍等…" else "点上面的「选择图片」开始挑图。",
+                        if (st.importing) "正在导入，稍等…" else "还没选图。点「选择图片」开始",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -768,7 +771,7 @@ fun ResultCard(batch: Batch, notice: String, onDismiss: () -> Unit) {
             }
             Row(Modifier.fillMaxWidth()) {
                 TextButton(onClick = { expanded = !expanded }, modifier = Modifier.weight(1f)) {
-                    Text(if (expanded) "收起每张明细" else "展开每张明细（${batch.items.size} 张）")
+                    Text(if (expanded) "收起" else "看每张（${batch.items.size} 张）")
                 }
                 TextButton(onClick = onDismiss) { Text("清除记录") }
             }

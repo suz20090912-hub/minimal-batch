@@ -323,6 +323,8 @@ object BatchEngine {
                 Done(name, srcKb, data.size / 1024, outW, outH, ms, null, saved.second)
             }
         } catch (t: Throwable) {
+            // 取消要往外抛，不然「停下」按了等于没按
+            if (t is kotlinx.coroutines.CancellationException) throw t
             val ms = (System.nanoTime() - tStart) / 1_000_000L
             return Done(name, srcKb, 0, srcW, srcH, ms, null, t.message ?: t.javaClass.simpleName)
         } finally {
@@ -475,6 +477,7 @@ object BatchEngine {
 
             return Preview(p, beforeThumb, after, out.width, out.height, data.size / 1024)
         } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
             return Preview(p, beforeThumb, null, 0, 0, 0, t.message ?: t.javaClass.simpleName)
         } finally {
             if (out != null && out !== decoded) out.recycle()

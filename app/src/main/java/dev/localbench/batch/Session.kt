@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 
@@ -209,7 +210,7 @@ object Session {
                     _state.value = _state.value.copy(importMsg = "正在扫文件夹… 已找到 $n 张")
                 }
                 if (found.isEmpty()) {
-                    toast(context, "这个文件夹里没找到图片")
+                    toast(context, "没找到图片")
                     return@launch
                 }
                 if (found.size >= FolderScan.MAX_FILES) {
@@ -219,7 +220,7 @@ object Session {
                 val merged = (old + found).distinct()
                 val added = merged.size - old.size
                 if (added <= 0) {
-                    toast(context, "这个文件夹里的图都已在名单里")
+                    toast(context, "这些图都在名单里了")
                     return@launch
                 }
                 _state.value = _state.value.copy(importMsg = "正在读取 0/${merged.size} 张…")
@@ -235,7 +236,7 @@ object Session {
                 _state.value = _state.value.copy(
                     picked = items, batch = null, notice = ""
                 )
-                toast(context, "从文件夹加入 $added 张，共 ${items.size} 张")
+                toast(context, "从文件夹加入 $added 张，现在共 ${items.size} 张")
             } catch (e: Throwable) {
                 // 导入这活儿涉及外部 provider，什么情况都可能，兜住别让 App 掉出去
                 toast(context, "导入失败：${e.message ?: e::class.java.simpleName}")
@@ -357,41 +358,58 @@ object Session {
                 emptyMap()
             }
 
-            _state.value = _state.value.copy(
-                running = true,
-                doneCount = doneMap.keys.count { k -> k in uris.map { it.toString() } },
-                totalCount = uris.size,
-                batch = null, notice = "", previewBusy = false,
-                resumeDone = 0, resumeTotal = 0
-            )
-            val b = BatchEngine.runBatch(
-                context, uris, cur.preset, 3, _state.value.prefix,
-                OutputPlan(cur.targetKb, cur.webp),
-                resume = doneMap,
-                onItem = { uri, d -> ResumeStore.append(context, uri, d) }
-            ) { d, t -> _state.value = _state.value.copy(doneCount = d, totalCount = t) }
-            ResumeStore.clear(context)
-            _state.value = _state.value.copy(running = false, batch = b)
+            _state.update {
+                it.copy(
+                    running = true,
+                    doneCount = doneMap.keys.count { k -> k in uris.map { it.toString() } },
+                    totalCount = uris.size,
+                    batch = null, notice = "", previewBusy = false,
+                    resumeDone = 0, resumeTotal = 0
+                )
+            }
+            try {
+                // 存档原图要按原尺寸解码，单张就可能上百 MB，不能三路一起上
+                val lanes = if (cur.preset == Preset.ARCHIVE) 1 else 3
+                val b = BatchEngine.runBatch(
+                    context, uris, cur.preset, lanes, _state.value.prefix,
+                    OutputPlan(cur.targetKb, cur.webp),
+                    resume = doneMap,
+                    onItem = { uri, d -> ResumeStore.append(context, uri, d) }
+                ) { d, t ->
+                    // 只动这两个数，别把 cancelRun 写进去的 running 又盖回去
+                    _state.update { it.copy(doneCount = d, totalCount = t) }
+                }
+                ResumeStore.clear(context)
+                _state.update { it.copy(running = false, batch = b) }
+            } catch (t: Throwable) {
+                // 用户自己点「停下」时走的是取消，不算出错，也没必要弹提示
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                // 存储写满、图片通道断开、内存不够，都会从这里出来。
+                // 断点留着：下次点开始能接着跑已经做完的那几张。
+                val msg = when (t) {
+                    is OutOfMemoryError -> "内存不够，这一批先停下了。可以先少选几张再试"
+                    else -> "处理中断：" + (t.message ?: t.javaClass.simpleName)
+                }
+                _state.update { it.copy(running = false, notice = msg) }
+            } finally {
+                _state.update { it.copy(running = false) }
+            }
         }
-    }
-
-    fun undo(context: Context, batch: Batch): Int {
-        var n = 0
-        batch.items.forEach { item ->
-            val u = item.outUri ?: return@forEach
-            if (Store.delete(context, u)) n++
-        }
-        if (_state.value.batch === batch) {
-            _state.value = _state.value.copy(batch = null)
-        }
-        _state.value = _state.value.copy(notice = "已删除这一批新图 $n 张；原图未动，系统相册里也会消失")
-        return n
     }
 
     fun cancelRun() {
+        val cur = _state.value
         runJob?.cancel()
         runJob = null
-        _state.value = _state.value.copy(running = false)
+        // 停下时把"已完成多少"露出来，下次点开始会跳过这些
+        _state.update {
+            it.copy(
+                running = false,
+                resumeDone = cur.doneCount,
+                resumeTotal = cur.totalCount,
+                notice = if (cur.doneCount > 0) "已停下，做完 ${cur.doneCount} 张。再点开始会接着跑" else ""
+            )
+        }
     }
 }
 

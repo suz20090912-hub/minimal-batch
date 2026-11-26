@@ -114,8 +114,8 @@ fun GalleryScreen(
                 )
                 Text(
                     if (selecting) {
-                        if (outside > 0) "其中 $outside 张在别的场景里，切「全部」能看到"
-                        else "再点图片可以加减选择"
+                        if (outside > 0) "另有 $outside 张在别的场景"
+                        else "再点图片可以加减"
                     } else "${loc.label} · 共 ${mb(totalKb)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -148,7 +148,7 @@ fun GalleryScreen(
                     }
                     OutlinedButton(onClick = {
                         if (!openGallery(ctx)) {
-                            toast(ctx, "这台机器没有能打开的系统相册，请到手机相册里找")
+                            toast(ctx, "没有能打开相册的应用")
                         }
                     }) { Text("相册") }
                     OutlinedButton(onClick = { reload++ }) { Text("刷新") }
@@ -198,10 +198,10 @@ fun GalleryScreen(
 
             filtered.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("这里还没有成品", style = MaterialTheme.typography.titleSmall)
+                    Text("还没有成品", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "去「转换」页选图、处理一批，回来就能在这里按场景查看。\n当前位置：${loc.label}",
+                        "去「转换」页处理一批，回来按场景看。\n位置：${loc.label}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -245,11 +245,11 @@ fun GalleryScreen(
                 title = { Text("删除选中的 ${victims.size} 张？") },
                 text = {
                     Column {
-                        Text("会先放进「最近删除」，${Trash.KEEP_DAYS} 天内能还原；系统相册里会立刻消失，原图不动。")
+                        Text("会进「最近删除」，${Trash.KEEP_DAYS} 天内能还原。相册里立刻消失，原图不动。")
                         if (victims.map { it.dir }.distinct().size > 1) {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "涉及 " + victims.groupBy { it.dir }
+                                victims.groupBy { it.dir }
                                     .map { "${it.key} ${it.value.size} 张" }
                                     .joinToString("、"),
                                 style = MaterialTheme.typography.bodySmall
@@ -265,10 +265,10 @@ fun GalleryScreen(
                         // 跨场景删完，视图留在单个场景里会看到空，干脆切回全部
                         if (victims.map { it.dir }.distinct().size > 1) dir = "全部"
                         scope.launch {
-                            val n = withContext(Dispatchers.IO) {
-                                victims.count { Trash.moveIn(ctx, loc, it) }
+                            withContext(Dispatchers.IO) {
+                                victims.forEach { Trash.moveIn(ctx, loc, it) }
                             }
-                            toast(ctx, "已移入最近删除 $n 张，${Trash.KEEP_DAYS} 天内可还原")
+                            toast(ctx, "已放进最近删除，${Trash.KEEP_DAYS} 天内能还原")
                             reload++
                         }
                     }) { Text("删除") }
