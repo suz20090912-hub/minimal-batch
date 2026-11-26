@@ -1,6 +1,6 @@
 # 极简批处理 · 项目进度总览
 
-> 整理时间：2026-11-26　当前版本：**v1.12.0（versionCode 43）**
+> 整理时间：2026-11-26　当前版本：**v1.13.0（versionCode 44）**
 > 仓库：https://github.com/suz20090912-hub/minimal-batch　协议：MIT　交流群：1135338332
 
 ## 一、这是什么
@@ -42,6 +42,7 @@
 | v1.10.0 | 41 | 最近删除：删掉的成品留 7 天，能还原也能彻底删 |
 | v1.11.0 | 42 | 选图网格标出处理后预计体积；设了目标体积直接标"≤目标" |
 | v1.12.0 | 43 | 成品页「全选」按全部成品算，不用先切「全部」 |
+| v1.13.0 | 44 | 主题切换过渡动画；补齐两套配色/圆角/字重，布局不动；全文案重写；代码体检修 3 个隐性问题 |
 
 ## 三、已经定下来的设计（别再来回改）
 
@@ -90,6 +91,19 @@
 - 设置「本次会话」卡片改成纯说明，原来的「清空已选图片」删掉——它实际是清转换记录，和结果卡「清除记录」重复。
 - 现在三个动作各归一处：去掉某几张是转换页长按「移出」；整批不要是转换页「清空已选」；只清记录是结果卡「清除记录」。
 - `Session.clearPicked` 只保留转换页一个调用点。
+
+---
+
+### v1.13.0：外观收一遍 + 文案收一遍 + 代码体检
+
+主题切换动画的做法：不是 `Crossfade`（会重建整棵树，滚动位置和输入状态都会断），而是把 `ColorScheme` 的 35 个颜色字段逐个 `animateColorAsState`（460ms `FastOutSlowIn`），`target.copy(...)` 出一份"动画中的色板"交给 `MaterialTheme`。
+
+- `Theme.kt` 基本重写：`ThemeMode`/`ThemeStore`/`resolveDark` 不变；`LightColors`/`DarkColors` 补到 `surfaceContainerLowest…Highest` + `surfaceDim/Bright` + `inverse*` + `outlineVariant`，深色 `surface #181B21`、`surfaceVariant #262B33`、`secondaryContainer #463F57`。
+- `AppShapes` 四档 6/10/16/22/28dp；`AppTypography` 只提字重（headline/title SemiBold）与正文行高（22/19sp），字号一律不动，避免撑破布局。
+- `THEME_FADE_MS = 460L` 单一常量，`animatedColors()` 和 `MainActivity` 的窗口底色延迟都用它。
+- `MainActivity.onCreate`：`LaunchedEffect(dark)` 里 `if (!firstTheme) delay(THEME_FADE_MS)` 再换窗口底色和状态栏图标色；冷启动第一帧立刻对齐。
+- 文案重写覆盖 `SettingsScreen`/`MainActivity`/`GalleryScreen`/`TrashScreen`/`Viewer`/`UpdateScreen`/`Session`/`NoticeScreen` 与 `assets` 两份 md；口径是去形容词副词、说结果、给数字、短提示不加句号。
+- 代码体检修的三个隐性问题：`CancellationException` 被 `catch (Throwable)` 吞掉（点停下其实没停）、`onProgress` 用整份 `copy` 把 `running = false` 盖回 true（停止状态被打回处理中）、`Session.start` 无异常兜底（OOM 后永远卡"处理中"且断点被清）。附带把存档原图并发降到 1 路，删掉无人调用的两处 `undo`。
 
 ---
 
@@ -230,8 +244,8 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 ## 七、已知限制
 
-- 删除没有回收站，删了就是删了。
-- 选图网格只显示原图体积，看不到“处理后会多大”，要估体积得先去成品页。
+- 删除先进「最近删除」留 7 天，超期自动清；清空「最近删除」之后就是彻底没了。
+- 选图网格的体积是估算（长边 480 真压一次再按面积外推），个别图会差一截。
 - 结果记录只存在内存里，冷启动就没了（有意为之，避免下次打开还挂上一批）。
 - 体积搜索是启发式（降质量 + 缩尺寸），极复杂的图可能仍略超目标；WebP 在微信、部分图床不友好。
 - 移出图之后原授权记录还留着，不影响使用，只是没做回收。
@@ -240,16 +254,16 @@ Windows 上没有 git / JDK，所以流程固定成这样：
 
 ## 八、待办
 
-1. **真机验收** v1.8.0 重点：选一个相机导出目录点「导入文件夹」，是否能扫到子目录里的图；扫描进度是否在动；导入完成后张数/体积对不对；先手动选两张再导文件夹，那两张是否还在。
-2. ~~目标大小压缩 + WebP~~（v1.7.0 已完成，等真机验收压缩是否真的进线）。
-3. ~~文件夹批量导入~~（v1.8.0）、~~断点续跑~~（v1.9.0 加、v1.9.1 修好）、~~回收站式删除~~（v1.10.0）、~~原图网格显示预计体积~~（v1.11.0）、~~跨场景全选~~（v1.12.0）已完成；下一个能力点待定（英文界面 / F-Droid / UI 整体美化）。
-4. **截图补齐**：01-main / 02-preview / 03-result / 04-gallery 四张实机图进 `screenshots/`。
-5. 再往后：回收站式删除、原图网格显示预计体积、英文界面 / F-Droid。
+1. **真机验收 v1.13.0**：切白色 / 黑色，看颜色是不是慢慢过渡（不要闪两下、不要边缘先跳）；设置页六张卡的说明还绕不绕口；成品页长按多选、最近删除的对话框是否读得顺。
+2. ~~目标大小压缩 + WebP~~（v1.7.0）、~~文件夹批量导入~~（v1.8.0）、~~断点续跑~~（v1.9.0 加 / v1.9.1 修好）、~~回收站式删除~~（v1.10.0）、~~原图网格预计体积~~（v1.11.0）、~~跨场景全选~~（v1.12.0）、~~UI 美化 + 文案重写~~（v1.13.0）已完成。
+3. 下一个能力点待定；英文界面 / F-Droid 仍往后放。
+4. **代码体检成为流程**：从 v1.13.0 起，每次跨 0.1 的版本（x.y.0）顺手过一遍代码层面的问题，不靠实测碰运气。
+5. **截图补齐**：01-main / 02-preview / 03-result / 04-gallery 四张实机图进 `screenshots/`（等外观定稿后拍）。
 
 ## 九、文件都在哪
 
-- 开发工程：`batch-app/`（1.12.0）
+- 开发工程：`batch-app/`（1.13.0）
 - 仓库镜像：`minimal-batch/`（与开发工程一致，含 CHANGELOG / README / update/version.json）
-- 交付的安装包：`极简批处理-v1.7.3-release.apk`（历史版本 1.2.2 → 1.7.2 也在同目录）
+- 交付的安装包：`极简批处理-v1.13.0-release.apk`（历史版本 1.2.2 → 1.12.0 也在同目录）
 - 签名：`release-key/minimal-batch.jks` + `release-key/说明.txt`
-- 云主机：`~/ktcheck/batch-app`（1.12.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v17*.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
+- 云主机：`~/ktcheck/batch-app`（1.13.0 源码树）、`~/keys/minimal-batch.jks`、构建日志 `~/ktcheck/build_v1130.log`（JDK17 在 `~/jdk-17.0.21.1+2`）
