@@ -98,6 +98,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,6 +143,7 @@ fun BatchApp() {
     var logOpen by remember { mutableStateOf(false) }
     var updateOpen by remember { mutableStateOf(false) }
     var noticeOpen by remember { mutableStateOf(false) }
+    var trashOpen by remember { mutableStateOf(false) }
     var noticeUnread by remember { mutableStateOf(false) }
     var lastZoom by remember { mutableStateOf<List<Shot>>(emptyList()) }
     var zoomReadOnly by remember { mutableStateOf(false) }
@@ -148,6 +151,8 @@ fun BatchApp() {
     LaunchedEffect(Unit) {
         Session.init(ctx)
         noticeUnread = !NoticeStore.seen(ctx)
+        // 过了保留期的图，开 App 的时候顺手清掉，不用等用户点进最近删除
+        withContext(Dispatchers.IO) { Trash.sweep(ctx) }
     }
     LaunchedEffect(zoomList) { if (zoomList.isNotEmpty()) lastZoom = zoomList }
     LaunchedEffect(st.batch) {
@@ -159,8 +164,9 @@ fun BatchApp() {
 
     BackHandler {
         when {
-            // 一层一层退：全屏图 → 更新中心/公告/更新日志 → 非转换页回转换页 → 根页才问退不退出
+            // 一层一层退：全屏图 → 最近删除/更新中心/公告/更新日志 → 非转换页回转换页 → 根页才问退不退出
             zoomList.isNotEmpty() -> zoomList = emptyList()
+            trashOpen -> trashOpen = false
             updateOpen -> updateOpen = false
             noticeOpen -> noticeOpen = false
             logOpen -> logOpen = false
@@ -244,7 +250,8 @@ fun BatchApp() {
                             zoomReadOnly = false
                             zoomList = list
                             zoomIndex = idx
-                        }
+                        },
+                        onOpenTrash = { trashOpen = true }
                     )
 
                     else -> SettingsScreen(
@@ -277,6 +284,17 @@ fun BatchApp() {
         exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 20 }
     ) {
         UpdateScreen { updateOpen = false }
+    }
+
+    AnimatedVisibility(
+        visible = trashOpen,
+        enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 14 },
+        exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 20 }
+    ) {
+        TrashScreen(
+            onClose = { trashOpen = false },
+            onChanged = { galleryKey++ }
+        )
     }
 
     AnimatedVisibility(

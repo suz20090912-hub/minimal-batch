@@ -442,12 +442,14 @@ fun ImageViewer(
             AlertDialog(
                 onDismissRequest = { askDelete = false },
                 title = { Text("删除这张？") },
-                text = { Text("「${s.name}」会从手机里删掉，原图不动；删完系统相册里也会一起消失。") },
+                text = { Text("「${s.name}」会进「最近删除」，${Trash.KEEP_DAYS} 天内能还原；系统相册里立刻消失，原图不动。") },
                 confirmButton = {
                     TextButton(onClick = {
                         askDelete = false
                         scope.launch {
-                            val ok = withContext(Dispatchers.IO) { Store.delete(ctx, s.uri) }
+                            val ok = withContext(Dispatchers.IO) {
+                                Trash.moveIn(ctx, Store.currentLocation(ctx), s)
+                            }
                             if (!ok) {
                                 toast(ctx, "删除失败，可能文件已经被移走了")
                                 return@launch
@@ -458,7 +460,7 @@ fun ImageViewer(
                             if (items.isEmpty()) {
                                 onDismiss()
                             } else {
-                                toast(ctx, "已删除 1 张")
+                                toast(ctx, "已移入最近删除，${Trash.KEEP_DAYS} 天内可还原")
                                 pager.scrollToPage(idx.coerceIn(0, items.size - 1))
                             }
                         }

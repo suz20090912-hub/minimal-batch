@@ -58,7 +58,12 @@ import kotlinx.coroutines.withContext
  * 成品页。按场景子文件夹分类，全部从磁盘现场扫，不依赖数据库。
  */
 @Composable
-fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> Unit) {
+fun GalleryScreen(
+    focus: String?,
+    refreshKey: Int,
+    onOpen: (List<Shot>, Int) -> Unit,
+    onOpenTrash: () -> Unit
+) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var shots by remember { mutableStateOf(emptyList<Shot>()) }
@@ -66,6 +71,7 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
     var dir by remember { mutableStateOf(focus ?: "全部") }
     var reload by remember { mutableStateOf(0) }
     var loc by remember { mutableStateOf(Store.currentLocation(ctx)) }
+    var trashN by remember { mutableStateOf(0) }
     val locs = remember(refreshKey, reload) { Store.locations(ctx) }
     // 选择模式：长按一张进来，点图片加减，顶部出现删除
     var selecting by remember { mutableStateOf(false) }
@@ -82,6 +88,7 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
     LaunchedEffect(refreshKey, reload, loc) {
         loading = true
         shots = withContext(Dispatchers.IO) { Store.listAt(ctx, loc) }
+        trashN = withContext(Dispatchers.IO) { Trash.count(ctx) }
         loading = false
     }
 
@@ -125,6 +132,9 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (trashN > 0) {
+                        OutlinedButton(onClick = onOpenTrash) { Text("最近删除 $trashN") }
+                    }
                     OutlinedButton(onClick = {
                         if (!openGallery(ctx)) {
                             toast(ctx, "这台机器没有能打开的系统相册，请到手机相册里找")
@@ -221,7 +231,7 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
             AlertDialog(
                 onDismissRequest = { askDelete = false },
                 title = { Text("删除选中的 ${selected.size} 张？") },
-                text = { Text("只会删这些新生成的图，原图不动；删完系统相册里也会一起消失。") },
+                text = { Text("会先放进「最近删除」，${Trash.KEEP_DAYS} 天内能还原；系统相册里会立刻消失，原图不动。") },
                 confirmButton = {
                     TextButton(onClick = {
                         askDelete = false
@@ -230,9 +240,9 @@ fun GalleryScreen(focus: String?, refreshKey: Int, onOpen: (List<Shot>, Int) -> 
                         selected = emptySet()
                         scope.launch {
                             val n = withContext(Dispatchers.IO) {
-                                victims.count { Store.delete(ctx, it.uri) }
+                                victims.count { Trash.moveIn(ctx, loc, it) }
                             }
-                            toast(ctx, "已删除 $n 张")
+                            toast(ctx, "已移入最近删除 $n 张，${Trash.KEEP_DAYS} 天内可还原")
                             reload++
                         }
                     }) { Text("删除") }
