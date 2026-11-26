@@ -1,7 +1,7 @@
 {
-  "versionCode": 39,
-  "versionName": "1.9.0",
-  "notes": "断点续跑：一批没跑完（被杀进程、手动停、手机重启），下次点「开始处理」会跳过已经做完的那几张接着跑，转换页会写清\"已完成 M/N 张\"。名单一改（重选、移出、清空）旧断点自动作废，不会串批。另：设置页的「默认场景」卡片删掉了——场景在转换页选，设置里放一份纯属重复。",
-  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.0/minimal-batch-v1.9.0-release.apk",
-  "size": 18638384
+  "versionCode": 40,
+  "versionName": "1.9.1",
+  "notes": "修断点续跑：上一版断点按\"第几张\"记，图片顺序一变就对不上、还会跳错图；现在按图片本身记。选图清单也从无序集合改成按顺序存，重启后不会因为顺序乱掉把断点当脏数据清掉——这就是\"杀进程重启续不上\"的真凶。这一版没加新功能。",
+  "apk": "https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.9.1/minimal-batch-v1.9.1-release.apk",
+  "size": 18638600
 }
