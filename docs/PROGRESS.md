@@ -224,7 +224,7 @@
 | v1.11.0 | 459128957 | 18,721,016 |
 | v1.12.0 | 459136210 | 18,721,232 |
 | v1.13.0 | 459165675 | 18,737,992 |
-| v1.13.1 | 待发布 | 18,834,764 |
+| v1.13.1 | 459184316 | 18,834,764 |
 
 `update/version.json` 现为 45 / 1.13.1 / 18,834,764，APK 直链：
 `https://github.com/suz20090912-hub/minimal-batch/releases/download/v1.13.1/minimal-batch-v1.13.1-release.apk`
